@@ -255,14 +255,14 @@ Le `(select …)` fait évaluer la fonction une seule fois par requête, pas à 
 | `contacts` | company_id, full_name, job_title, email, phone, custom |
 | `opportunities` | company_id, contact_id, owner_id, title, stage_id, amount, currency, expected_close_on, source, lost_reason, custom |
 | `interactions` | company_id, opportunity_id, contact_id, user_id, type (appel, e-mail, rendez-vous, note), occurred_at, summary |
-| `weekly_reports` | user_id, week_start (lundi), calls_prospecting, calls_follow_up, emails_sent, qualified_meetings, opportunities_created\*, memos_done\*, comments, status (`draft`, `submitted`, `validated`), custom ; unique (brand_id, user_id, week_start) |
+| `weekly_reports` | user_id, week_start (lundi), calls_prospecting, calls_follow_up, emails_sent, qualified_meetings, opportunities_declared\*, memos_declared\*, comments, status (`draft`, `submitted`, `validated`), submitted_at, validated_at, validated_by, custom ; unique (brand_id, user_id, week_start) |
 | `commercial_documents` | **offres et mémos dans une même table** (colonne `kind` : `offer` ou `memo`), écrans distincts. reference (automatique : `OF-CODE-2026-0001`, `MS-CODE-2026-0001`), company_id, contact_id, owner_id, subject, issued_on (création ou rédaction), sent_on, status_id, follow_up_on, comments, custom ; offres seules : amount, currency, valid_until ; mémos seuls : recipient_response |
 | `document_events` | chronologie : création, modification, changement de statut, envoi, relance prévue, relance faite, commentaire, pièce jointe, archivage. Alimentée par triggers ; seuls les commentaires et relances faites se saisissent |
 | `document_attachments` | pièces jointes (bucket privé `attachments`, chemin `{brand_id}/{document_id}/…`, 4 Mo au plus) |
 | `contracts` | company_id, opportunity_id, offer_id, owner_id, title, signed_on, amount, currency, start_on, end_on, custom |
-| `objectives` | user_id (null = objectif collectif), metric_key, period_type, period_start, period_end, target_value, currency |
+| `objectives` | user_id (null = objectif collectif), metric_key, period_start, period_end, target_value, currency (obligatoire pour le chiffre d'affaires, interdite sinon), comments |
 
-\* saisis à la main uniquement si la marque est en mode déclaratif pour cet indicateur (section 6).
+\* saisis à la main uniquement si le module correspondant (CRM, mémos) est désactivé pour la marque (section 6).
 
 ### Marketing
 
@@ -395,7 +395,7 @@ Ces formules vivent dans `src/lib/metrics` et sont couvertes par des tests autom
 
 ### Éviter les doubles comptages
 
-1. **Activités déclarées et dossiers CRM.** Pour chaque indicateur commercial, la marque choisit une seule source (`metric_settings.source`) :
+1. **Activités déclarées et dossiers CRM.** Chaque indicateur commercial a une seule source, déterminée par les modules actifs de la marque (fonction `metric_actuals`) :
    - « opportunités créées » et « mémos réalisés » sont comptés depuis le CRM et les registres quand ces modules sont actifs. La fiche hebdomadaire les affiche alors en lecture seule ;
    - appels, e-mails et rendez-vous qualifiés viennent des fiches hebdomadaires. Les `interactions` du CRM servent d'historique qualitatif et ne s'y ajoutent pas.
 2. **Historique importé et CRM.** Chaque marque a une date de bascule par module. Avant cette date, les tableaux lisent `historical_metrics` ; à partir de cette date, les enregistrements détaillés. Jamais les deux sur une même période.
@@ -428,9 +428,17 @@ Les fonctions d'agrégation sont les mêmes que pour une marque, appliquées à 
 
 Un sprint est un lot livrable et vérifiable, développé sur sa propre branche avec une URL Preview Vercel.
 
-**Avancement :** Sprints 0 à 3 et 4a livrés sur leurs branches (base de dev, Preview Vercel). Rien n'est encore en production. Le Sprint 4 est découpé : 4a (prospects, contacts, échanges, opportunités, contrats) puis 4b (fiches d'activité hebdomadaire, vues du responsable, objectifs).
+**Avancement :** Sprints 0 à 4 livrés sur leurs branches (base de dev, Preview Vercel). Rien n'est encore en production. Le Sprint 4 a été découpé : 4a (prospects, contacts, échanges, opportunités, contrats) puis 4b (fiches d'activité hebdomadaire, vues du responsable, objectifs).
 
 **Décision Sprint 4a :** l'annuaire des prospects est partagé au sein d'une marque (permission `crm.read`) pour éviter les doublons d'entreprises ; les opportunités, offres, mémos et contrats restent personnels pour les commerciaux (`*.manage_own`).
+
+**Règles Sprint 4b :**
+- Seules les fiches soumises ou validées comptent dans les réalisés ; une fiche relève de la période qui contient son lundi.
+- Une fiche validée est verrouillée pour son auteur ; seul un responsable (`activities.validate`) la valide ou la renvoie pour correction.
+- Les collaborateurs suivis (fiches manquantes) sont ceux dont le rôle de marque détient `activities.manage_own`.
+- Sans `objectives.read_all` ni `activities.read_all`, un commercial voit son réalisé et le total de l'équipe, jamais le détail de ses collègues (lignes regroupées par `metric_actuals`).
+- Un indicateur tiré des fiches est « inconnu » (et non 0) tant qu'aucune fiche n'est soumise ; un registre sans enregistrement vaut 0.
+- Un objectif n'est accepté que sur un indicateur mesurable pour la marque (les offres et contrats exigent leur module).
 
 | Sprint | Contenu | Taille |
 |---|---|---|

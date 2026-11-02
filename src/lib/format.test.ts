@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, formatBytes, formatDate, formatMoney, todayIso } from "./format";
+import { addDays, formatBytes, formatDate, formatMoney, formatNumber, formatPercent, todayIso } from "./format";
 
 // Intl insère des espaces insécables : on les normalise pour comparer.
 const plain = (value: string) => value.replace(/[  ]/g, " ");
@@ -38,5 +38,17 @@ describe("formatBytes", () => {
     expect(formatBytes(512)).toBe("512 o");
     expect(formatBytes(2048)).toBe("2 Ko");
     expect(formatBytes(3.5 * 1024 * 1024)).toBe("3,5 Mo");
+  });
+});
+
+describe("formatNumber et formatPercent", () => {
+  it("formate en français", () => {
+    expect(plain(formatNumber(12500))).toBe("12 500");
+    expect(plain(formatPercent(87.5))).toBe("88 %");
+  });
+
+  it("n'affiche jamais 0 pour une valeur absente", () => {
+    expect(formatNumber(null)).toBe("—");
+    expect(formatPercent(null)).toBe("n/d");
   });
 });

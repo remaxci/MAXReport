@@ -795,6 +795,69 @@ export type Database = {
         }
         Relationships: []
       }
+      objectives: {
+        Row: {
+          brand_id: string
+          comments: string | null
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          id: string
+          metric_key: string
+          period_end: string
+          period_start: string
+          target_value: number
+          updated_at: string
+          updated_by: string | null
+          user_id: string | null
+        }
+        Insert: {
+          brand_id: string
+          comments?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          id?: string
+          metric_key: string
+          period_end: string
+          period_start: string
+          target_value: number
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          brand_id?: string
+          comments?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          id?: string
+          metric_key?: string
+          period_end?: string
+          period_start?: string
+          target_value?: number
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "objectives_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objectives_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       opportunities: {
         Row: {
           amount: number | null
@@ -1210,11 +1273,103 @@ export type Database = {
           },
         ]
       }
+      weekly_reports: {
+        Row: {
+          brand_id: string
+          calls_follow_up: number
+          calls_prospecting: number
+          comments: string | null
+          created_at: string
+          custom: Json
+          emails_sent: number
+          id: string
+          memos_declared: number | null
+          opportunities_declared: number | null
+          qualified_meetings: number
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          user_id: string
+          validated_at: string | null
+          validated_by: string | null
+          week_start: string
+        }
+        Insert: {
+          brand_id: string
+          calls_follow_up?: number
+          calls_prospecting?: number
+          comments?: string | null
+          created_at?: string
+          custom?: Json
+          emails_sent?: number
+          id?: string
+          memos_declared?: number | null
+          opportunities_declared?: number | null
+          qualified_meetings?: number
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          week_start: string
+        }
+        Update: {
+          brand_id?: string
+          calls_follow_up?: number
+          calls_prospecting?: number
+          comments?: string | null
+          created_at?: string
+          custom?: Json
+          emails_sent?: number
+          id?: string
+          memos_declared?: number | null
+          opportunities_declared?: number | null
+          qualified_meetings?: number
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_reports_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_reports_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_reports_validated_by_fkey"
+            columns: ["validated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      activity_members: {
+        Args: { p_brand_id: string }
+        Returns: {
+          label: string
+          user_id: string
+        }[]
+      }
       add_brand_member: {
         Args: { p_brand_id: string; p_email: string; p_role_id: string }
         Returns: string
@@ -1225,6 +1380,15 @@ export type Database = {
           is_global: boolean
           label: string
           user_id: string
+        }[]
+      }
+      metric_actuals: {
+        Args: { p_brand_id: string; p_from: string; p_to: string }
+        Returns: {
+          currency: string
+          metric_key: string
+          user_id: string
+          value: number
         }[]
       }
       reorder_config: {

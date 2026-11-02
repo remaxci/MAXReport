@@ -52,3 +52,16 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} Ko`;
   return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} Mo`;
 }
+
+const NUMBER = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 });
+const PERCENT = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
+
+/** Nombre en français ; une valeur absente s'affiche « — », jamais 0. */
+export function formatNumber(value: number | null): string {
+  return value === null ? "—" : NUMBER.format(value);
+}
+
+/** Pourcentage déjà multiplié par 100 (ex. 87.5 → « 88 % ») ; absent → « n/d ». */
+export function formatPercent(value: number | null): string {
+  return value === null ? "n/d" : `${PERCENT.format(value)} %`;
+}

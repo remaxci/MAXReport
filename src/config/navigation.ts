@@ -59,7 +59,13 @@ export const brandNavigation: NavGroup[] = [
   {
     label: "Commercial",
     items: [
-      { title: "Activités hebdomadaires", icon: CalendarCheck, module: "activities" },
+      {
+        title: "Activités hebdomadaires",
+        icon: CalendarCheck,
+        module: "activities",
+        path: "/activites",
+        permission: ["activities.read_all", "activities.manage_own"],
+      },
       { title: "Prospects", icon: Building, module: "crm", path: "/prospects", permission: "crm.read" },
       {
         title: "Opportunités",
@@ -94,7 +100,7 @@ export const brandNavigation: NavGroup[] = [
   {
     label: "Gestion",
     items: [
-      { title: "Objectifs", icon: Target, module: "objectives" },
+      { title: "Objectifs", icon: Target, module: "objectives", path: "/objectifs", permission: "brand.read" },
       { title: "Budgets", icon: Wallet, module: "budgets" },
       { title: "Rapports", icon: ChartColumn, module: "reports" },
       { title: "Imports", icon: Upload, module: "imports" },

@@ -28,6 +28,11 @@ export const PERMISSIONS = [
   "contracts.read_all",
   "contracts.manage_all",
   "contracts.manage_own",
+  "activities.read_all",
+  "activities.manage_own",
+  "activities.validate",
+  "objectives.read_all",
+  "objectives.manage",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
