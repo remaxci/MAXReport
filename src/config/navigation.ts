@@ -60,8 +60,14 @@ export const brandNavigation: NavGroup[] = [
     label: "Commercial",
     items: [
       { title: "Activités hebdomadaires", icon: CalendarCheck, module: "activities" },
-      { title: "Prospects", icon: Building, module: "crm" },
-      { title: "Opportunités", icon: Handshake, module: "crm" },
+      { title: "Prospects", icon: Building, module: "crm", path: "/prospects", permission: "crm.read" },
+      {
+        title: "Opportunités",
+        icon: Handshake,
+        module: "crm",
+        path: "/opportunites",
+        permission: ["opportunities.read_all", "opportunities.manage_all", "opportunities.manage_own"],
+      },
       {
         title: "Offres",
         icon: FileText,
@@ -76,7 +82,13 @@ export const brandNavigation: NavGroup[] = [
         path: "/memos",
         permission: ["memos.read_all", "memos.manage_all", "memos.manage_own"],
       },
-      { title: "Contrats", icon: Signature, module: "contracts" },
+      {
+        title: "Contrats",
+        icon: Signature,
+        module: "contracts",
+        path: "/contrats",
+        permission: ["contracts.read_all", "contracts.manage_all", "contracts.manage_own"],
+      },
     ],
   },
   {

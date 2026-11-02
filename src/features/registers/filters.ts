@@ -8,6 +8,8 @@ export type RegisterFilters = {
   to?: string;
   followUp?: "overdue" | "week";
   archived?: boolean;
+  /** Fiche prospect : documents d'une seule entreprise (hors URL). */
+  companyId?: string;
 };
 
 type SearchParams = Record<string, string | string[] | undefined>;

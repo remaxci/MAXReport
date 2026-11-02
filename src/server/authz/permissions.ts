@@ -22,6 +22,12 @@ export const PERMISSIONS = [
   "memos.manage_own",
   "crm.read",
   "crm.manage",
+  "opportunities.read_all",
+  "opportunities.manage_all",
+  "opportunities.manage_own",
+  "contracts.read_all",
+  "contracts.manage_all",
+  "contracts.manage_own",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

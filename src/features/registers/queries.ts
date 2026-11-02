@@ -112,6 +112,7 @@ export async function listDocuments(
   query = filters.archived ? query.not("archived_at", "is", null) : query.is("archived_at", null);
   if (filters.status) query = query.eq("status_id", filters.status);
   if (filters.owner) query = query.eq("owner_id", filters.owner);
+  if (filters.companyId) query = query.eq("company_id", filters.companyId);
   if (filters.from) query = query.gte("issued_on", filters.from);
   if (filters.to) query = query.lte("issued_on", filters.to);
   if (filters.q) {

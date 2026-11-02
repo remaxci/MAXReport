@@ -401,6 +401,101 @@ export type Database = {
           },
         ]
       }
+      contracts: {
+        Row: {
+          amount: number
+          archived_at: string | null
+          brand_id: string
+          comments: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          custom: Json
+          end_on: string | null
+          id: string
+          offer_id: string | null
+          opportunity_id: string | null
+          owner_id: string
+          signed_on: string
+          start_on: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount: number
+          archived_at?: string | null
+          brand_id: string
+          comments?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          currency: string
+          custom?: Json
+          end_on?: string | null
+          id?: string
+          offer_id?: string | null
+          opportunity_id?: string | null
+          owner_id?: string
+          signed_on: string
+          start_on?: string | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount?: number
+          archived_at?: string | null
+          brand_id?: string
+          comments?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          custom?: Json
+          end_on?: string | null
+          id?: string
+          offer_id?: string | null
+          opportunity_id?: string | null
+          owner_id?: string
+          signed_on?: string
+          start_on?: string | null
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_brand_id_company_id_fkey"
+            columns: ["brand_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "contracts_brand_id_offer_id_fkey"
+            columns: ["brand_id", "offer_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_documents"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "contracts_brand_id_opportunity_id_fkey"
+            columns: ["brand_id", "opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "contracts_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_field_definitions: {
         Row: {
           brand_id: string
@@ -562,6 +657,74 @@ export type Database = {
           },
         ]
       }
+      interactions: {
+        Row: {
+          brand_id: string
+          company_id: string
+          contact_id: string | null
+          created_at: string
+          id: string
+          occurred_at: string
+          opportunity_id: string | null
+          summary: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          brand_id: string
+          company_id: string
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          occurred_at?: string
+          opportunity_id?: string | null
+          summary: string
+          type: string
+          user_id?: string
+        }
+        Update: {
+          brand_id?: string
+          company_id?: string
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          occurred_at?: string
+          opportunity_id?: string | null
+          summary?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interactions_brand_id_company_id_fkey"
+            columns: ["brand_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "interactions_brand_id_contact_id_fkey"
+            columns: ["brand_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "interactions_brand_id_opportunity_id_fkey"
+            columns: ["brand_id", "opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "interactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       memberships: {
         Row: {
           brand_id: string | null
@@ -631,6 +794,108 @@ export type Database = {
           position?: number
         }
         Relationships: []
+      }
+      opportunities: {
+        Row: {
+          amount: number | null
+          archived_at: string | null
+          brand_id: string
+          closed_on: string | null
+          company_id: string
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          custom: Json
+          expected_close_on: string | null
+          id: string
+          lost_reason: string | null
+          owner_id: string
+          source: string | null
+          stage_id: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount?: number | null
+          archived_at?: string | null
+          brand_id: string
+          closed_on?: string | null
+          company_id: string
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          custom?: Json
+          expected_close_on?: string | null
+          id?: string
+          lost_reason?: string | null
+          owner_id?: string
+          source?: string | null
+          stage_id: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount?: number | null
+          archived_at?: string | null
+          brand_id?: string
+          closed_on?: string | null
+          company_id?: string
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          custom?: Json
+          expected_close_on?: string | null
+          id?: string
+          lost_reason?: string | null
+          owner_id?: string
+          source?: string | null
+          stage_id?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunities_brand_id_company_id_fkey"
+            columns: ["brand_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "opportunities_brand_id_contact_id_fkey"
+            columns: ["brand_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "opportunities_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_brand_id_stage_id_fkey"
+            columns: ["brand_id", "stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "opportunities_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       option_items: {
         Row: {
