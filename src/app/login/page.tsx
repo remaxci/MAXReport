@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
-import { LoginForm } from "./login-form";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { LoginForm } from "@/features/auth/components/login-form";
 
 export const metadata: Metadata = {
   title: "Connexion · MAXreport",
@@ -7,14 +14,18 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold tracking-tight">MAXreport</h1>
-        <p className="mt-1 mb-8 text-sm text-foreground/60">
-          Connectez-vous pour accéder à vos rapports.
-        </p>
-        <LoginForm />
-      </div>
+    <main className="flex min-h-svh items-center justify-center bg-muted/40 px-4 py-16">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold">MAXreport</CardTitle>
+          <CardDescription>
+            Connectez-vous pour accéder à vos rapports.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <LoginForm />
+        </CardContent>
+      </Card>
     </main>
   );
 }

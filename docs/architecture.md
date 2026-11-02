@@ -1,0 +1,460 @@
+# MAXreport — Architecture fonctionnelle et technique
+
+> Proposition à valider · 2 novembre 2026 · Basée sur le dépôt `remaxci/MAXReport` (commit `fc04b60`)
+
+1. [Audit de l'existant](#1-audit-de-lexistant)
+2. [Architecture fonctionnelle recommandée](#2-architecture-fonctionnelle-recommandée)
+3. [Modules et relations](#3-modules-et-relations)
+4. [Schéma de données Supabase](#4-schéma-de-données-supabase)
+5. [Personnalisation sans code](#5-personnalisation-sans-code)
+6. [Règles de calcul et de consolidation](#6-règles-de-calcul-et-de-consolidation)
+7. [Plan de développement par sprints](#7-plan-de-développement-par-sprints)
+8. [Décisions à valider](#8-décisions-à-valider)
+
+---
+
+## 1. Audit de l'existant
+
+### Ce qui existe
+
+| Élément | État | Décision |
+|---|---|---|
+| Next.js 16.4 (App Router), React 19.3, TypeScript, Tailwind 4 | En place, build OK | Conserver |
+| Cache Components + Partial Prefetching | Activés | Conserver : toute lecture de session derrière `<Suspense>` |
+| `src/proxy.ts` (ex-middleware) | Rafraîchit la session, redirige vers `/login` | Conserver ; ajouter la redirection vers la marque par défaut |
+| Clients Supabase serveur et navigateur (`@supabase/ssr` 0.12) | En place | Conserver ; les typer avec les types générés |
+| `getCurrentUser()` (`src/lib/auth.ts`) | Lit les claims JWT | Faire évoluer en couche d'autorisation (profil, marques, permissions) |
+| Connexion e-mail / mot de passe, déconnexion | En place | Conserver ; ajouter invitation et mot de passe oublié |
+| Tableau de bord | Vide | Remplacer par les tableaux de bord marque et Direction |
+| Base Supabase `MAXreport` (Postgres 17, eu-west-1) | Vide, aucune table | Créer le schéma par migrations versionnées |
+| Vercel `remaxci/max-report` | Relié à GitHub, variables en place | Conserver |
+
+### Ce qui manque
+
+- shadcn/ui (prévu dans la stack, pas encore installé), graphiques, formulaires (react-hook-form + Zod).
+- Tests automatisés : aucun.
+- Migrations SQL versionnées dans le dépôt, types TypeScript générés depuis la base.
+- Tout le modèle de données, les rôles et la RLS.
+
+### Risques à traiter avant d'aller plus loin
+
+| Risque | Impact | Correction proposée |
+|---|---|---|
+| Tout push sur `main` déploie en production | Contraire à la règle « pas de production sans validation » | Travailler sur des branches (`sprint-1/...`) qui donnent une URL Preview Vercel ; fusionner dans `main` seulement après validation |
+| Un seul projet Supabase pour le développement et la production | Chaque migration de test touche la base de production | Créer un projet `MAXreport-dev` ; Preview Vercel → dev, Production → prod |
+| Vercel Hobby | Offre réservée à un usage personnel non commercial | Passer en Pro avant la mise en service réelle |
+| Supabase Free | Projet mis en pause après 7 jours d'inactivité, pas de sauvegardes quotidiennes | Passer en Pro avant d'y mettre des données réelles |
+
+---
+
+## 2. Architecture fonctionnelle recommandée
+
+### Principes directeurs
+
+1. **La marque est la frontière de sécurité.** Chaque donnée métier porte un `brand_id` obligatoire, et la RLS Supabase isole les marques. L'isolation ne dépend jamais de l'interface.
+2. **Deux verrous.** Le serveur Next.js vérifie les permissions avant chaque action ; la RLS les revérifie en base. Le navigateur n'est jamais cru sur parole.
+3. **Une seule source de vérité par indicateur.** Chaque chiffre affiché vient d'une seule table, selon une règle écrite (section 6). C'est ce qui empêche les doubles comptages.
+4. **La personnalisation est de la donnée, jamais du SQL.** Les administrateurs modifient des définitions stockées en base ; aucun écran ne modifie le schéma.
+5. **Aucune donnée inventée.** Les chiffres viennent de la saisie ou de l'import. Les connecteurs (GA4, Search Console, régies publicitaires) sont prévus dans le modèle mais ne sont pas simulés.
+
+### Couches
+
+```
+Navigateur (React, shadcn/ui)
+   │  formulaires → Server Actions        lectures → Server Components
+   ▼
+Serveur Next.js (Vercel)
+   ├─ src/server/authz     contexte utilisateur, marques autorisées, permissions
+   ├─ src/features/*       requêtes, actions et schémas Zod de chaque module
+   └─ src/lib/metrics      catalogue d'indicateurs et formules (testées)
+   │  client Supabase avec le jeton de l'utilisateur → RLS appliquée
+   ▼
+Supabase
+   ├─ Postgres : tables, RLS, fonctions d'agrégation, triggers d'audit
+   ├─ Auth     : comptes, invitations
+   └─ Storage  : bucket privé « attachments », URL signées de courte durée
+```
+
+La clé secrète Supabase (`SUPABASE_SECRET_KEY`) ne sert que côté serveur, pour les invitations et l'administration. Elle ne porte jamais le préfixe `NEXT_PUBLIC_`.
+
+### Navigation
+
+```
+/login
+/                          → marque par défaut de l'utilisateur, ou /direction
+/direction                 tableau de bord consolidé (filtres marque et période)
+/m/[marque]                tableau de bord de la marque
+/m/[marque]/marketing/     reseaux · campagnes · sites
+/m/[marque]/commercial/    activites · prospects · opportunites · offres · memos · contrats
+/m/[marque]/objectifs
+/m/[marque]/budgets
+/m/[marque]/rapports
+/m/[marque]/imports
+/m/[marque]/parametres     modules, champs, listes, statuts, pipeline, indicateurs, modèles
+/parametres                marques, collaborateurs, rôles, devises et taux
+```
+
+Le sélecteur de marque n'affiche que les marques autorisées. Un module désactivé pour une marque disparaît du menu et ses pages renvoient une erreur 404.
+
+### Organisation du code
+
+```
+src/
+  app/                  routes, aussi minces que possible
+  features/<module>/    queries.ts · actions.ts · schemas.ts · components/
+  server/authz/         getContext(), requirePermission(), brandsWith()
+  lib/metrics/          catalogue d'indicateurs, formules, conversion de devises
+  lib/supabase/         clients + database.types.ts (généré)
+  components/ui/        composants shadcn/ui
+supabase/
+  migrations/           SQL versionné : source de vérité du schéma
+  tests/                tests RLS
+```
+
+### Environnements et livraison
+
+| Environnement | Code | Base Supabase | Accès |
+|---|---|---|---|
+| Local | branche de travail | MAXreport-dev | développeur |
+| Preview Vercel | chaque branche poussée | MAXreport-dev | protégé par Vercel |
+| Production | `main` uniquement | MAXreport | utilisateurs |
+
+Les migrations sont écrites dans `supabase/migrations/`, appliquées sur dev, puis sur prod au moment de la fusion validée.
+
+---
+
+## 3. Modules et relations
+
+| Module | Contenu | Dépend de |
+|---|---|---|
+| **Noyau** | marques, profils, rôles et permissions, affectations, journal d'audit, pièces jointes | — |
+| **Paramètres** | modules par marque, champs personnalisés, listes, statuts, pipeline, indicateurs, modèles de rapports | Noyau |
+| **Commercial** | prospects, contacts, opportunités, interactions, activités hebdomadaires, offres, mémos, contrats | Noyau, Paramètres |
+| **Marketing** | plateformes, comptes sociaux, campagnes, sites web, relevés de performance | Noyau, Paramètres |
+| **Budgets** | budgets, lignes budgétaires, dépenses, taux de change, alertes | Noyau, Marketing (campagnes) |
+| **Objectifs** | objectifs individuels et collectifs sur un indicateur du catalogue | Commercial, Marketing, Budgets |
+| **Imports et exports** | lots d'import, correspondance des colonnes, historique, exports Excel et PDF | tous |
+| **Tableaux de bord** | vue marque, vue Direction | tous, en lecture seule |
+
+```mermaid
+flowchart LR
+  B[Marque] --> CO[Prospects]
+  CO --> CT[Contacts]
+  CO --> OP[Opportunités]
+  CO --> OF[Offres]
+  CO --> ME[Mémos]
+  CO --> IN[Interactions]
+  OP --> OF
+  OF --> CN[Contrats signés]
+  OP --> CN
+  B --> WR[Activités hebdomadaires]
+  B --> SA[Comptes sociaux] --> SS[Relevés sociaux]
+  B --> CA[Campagnes] --> CS[Relevés campagnes]
+  B --> WS[Sites web] --> WM[Relevés sites]
+  B --> BU[Budgets] --> BL[Lignes budgétaires] --> EX[Dépenses]
+  CA --> BL
+  CA --> EX
+  B --> OB[Objectifs]
+  IB[Lots d'import] -.-> SS
+  IB -.-> CS
+  IB -.-> WM
+  IB -.-> EX
+  IB -.-> HI[Historique agrégé]
+```
+
+---
+
+## 4. Schéma de données Supabase
+
+### Conventions
+
+- Clé primaire `id uuid` (journaux : `bigint identity`).
+- Toute table métier porte `brand_id uuid not null`, `created_at`, `created_by`, `updated_at`, `updated_by` et `archived_at`. On archive au lieu de supprimer.
+- Les tables enfants référencent leur parent par **clé composite** `(brand_id, parent_id)`. Une offre de la marque A ne peut donc pas pointer vers un prospect de la marque B, même par erreur.
+- Montants : `numeric(18,2)` + `currency char(3)` limitée à `XOF`, `USD`, `EUR`. Le montant d'origine n'est jamais converti en place.
+- Champs personnalisés : colonne `custom jsonb not null default '{}'` sur chaque entité personnalisable.
+- Lignes chiffrées : `source` (`manual`, `import`, `crm`, `api`) et `import_batch_id` le cas échéant.
+- Fonctions internes dans un schéma `app`, non exposé par l'API.
+
+### Noyau
+
+| Table | Colonnes principales |
+|---|---|
+| `brands` | code (unique, figé, ex. `RMXCI`), name, slug, logo_path, primary_color, reporting_currency (`XOF`), timezone (`Africa/Abidjan`), is_active |
+| `profiles` | id (= `auth.users.id`), full_name, email, phone, job_title, default_brand_id, is_active |
+| `permissions` | key (ex. `offers.read_all`), module, label. Catalogue fixe, alimenté par migration |
+| `roles` | key, label, description, is_system |
+| `role_permissions` | role_id, permission |
+| `memberships` | user_id, brand_id (**null = toutes les marques**), role_id ; unique (user_id, brand_id) |
+| `audit_log` | brand_id, table_name, record_id, action, actor_id, at, changes jsonb (avant / après) |
+| `attachments` | brand_id, entity, record_id, storage_path, file_name, mime_type, size_bytes |
+| `reference_counters` | brand_id, kind (`offer`, `memo`), year, last_value |
+
+**Rôles par défaut** (seul le super-administrateur les modifie) :
+
+| Rôle | Portée | Droits principaux |
+|---|---|---|
+| Super-administrateur | toutes les marques | tout, y compris marques, rôles et permissions |
+| Direction | toutes les marques | lecture de tout, tableaux consolidés, exports |
+| Administrateur de marque | une marque | paramètres et collaborateurs de la marque |
+| Responsable commercial | une marque | tout le commercial de la marque, validation des fiches hebdomadaires |
+| Commercial | une marque | ses propres prospects, offres, mémos et activités |
+| Marketing | une marque | réseaux, campagnes, sites, dépenses marketing |
+| Lecture | une marque | consultation seule |
+
+Un collaborateur peut avoir un rôle différent dans chaque marque.
+
+**Modèle RLS.** Une fonction renvoie les marques sur lesquelles l'utilisateur détient une permission, et chaque politique s'en sert :
+
+```sql
+create function app.brands_with(p_permission text)
+returns uuid[] language sql stable security definer set search_path = '' as $$
+  select coalesce(array_agg(b.id), '{}')
+  from public.brands b
+  where exists (
+    select 1
+    from public.memberships m
+    join public.role_permissions rp on rp.role_id = m.role_id
+    join public.profiles p on p.id = m.user_id and p.is_active
+    where m.user_id = (select auth.uid())
+      and rp.permission = p_permission
+      and (m.brand_id = b.id or m.brand_id is null)
+  );
+$$;
+
+create policy offers_select on public.offers for select to authenticated using (
+  brand_id = any ((select app.brands_with('offers.read_all')))
+  or (owner_id = (select auth.uid())
+      and brand_id = any ((select app.brands_with('offers.read_own'))))
+);
+```
+
+Le `(select …)` fait évaluer la fonction une seule fois par requête, pas à chaque ligne. Le même principe s'applique à l'insertion et à la modification (`with check`). La suppression est réservée aux administrateurs ; la règle générale reste l'archivage.
+
+**Journal d'audit.** Un trigger générique enregistre chaque création, modification et archivage sur les tables métier. Personne ne peut modifier ni supprimer le journal : il n'a aucune politique d'écriture.
+
+**Pièces jointes.** Bucket Storage privé `attachments`, chemins `{brand_id}/{entité}/{id}/{uuid}-{nom}`. La politique Storage contrôle le `brand_id` du chemin avec `app.brands_with`. Téléchargement par URL signée valable 60 secondes.
+
+### Paramètres
+
+| Table | Rôle |
+|---|---|
+| `brand_modules` | brand_id, module, enabled, settings jsonb (dont la date de bascule vers le CRM) |
+| `option_lists`, `option_items` | listes déroulantes par marque (sources, secteurs, objectifs de campagne, catégories de dépenses…) : value, label, color, position, is_active |
+| `statuses` | brand_id, entity, key, label, color, position, is_default, **category** (`draft`, `active`, `success`, `failure`, `closed`) |
+| `pipeline_stages` | brand_id, key, label, position, probability, category (`open`, `won`, `lost`) |
+| `custom_field_definitions` | voir section 5 |
+| `metric_settings` | brand_id, metric_key, enabled, source (`declared` ou `crm`), seuils d'alerte |
+| `report_templates` | brand_id (null = modèle commun), name, period_type, sections jsonb |
+
+### Commercial
+
+| Table | Colonnes principales |
+|---|---|
+| `companies` | name, sector, city, country, phone, email, website, owner_id, source, status_id, next_follow_up_at, custom |
+| `contacts` | company_id, full_name, job_title, email, phone, custom |
+| `opportunities` | company_id, contact_id, owner_id, title, stage_id, amount, currency, expected_close_on, source, lost_reason, custom |
+| `interactions` | company_id, opportunity_id, contact_id, user_id, type (appel, e-mail, rendez-vous, note), occurred_at, summary |
+| `weekly_reports` | user_id, week_start (lundi), calls_prospecting, calls_follow_up, emails_sent, qualified_meetings, opportunities_created\*, memos_done\*, comments, status (`draft`, `submitted`, `validated`), custom ; unique (brand_id, user_id, week_start) |
+| `offers` | reference (automatique, ex. `OF-RMXCI-2026-0001`), company_id, contact_id, owner_id, subject, created_on, sent_on, amount, currency, status_id, next_follow_up_on, valid_until, comments, custom |
+| `offer_events` | offer_id, type (création, envoi, relance prévue, relance faite, changement de statut, commentaire), occurred_at, actor_id, payload |
+| `memos` | reference (automatique, ex. `MS-RMXCI-2026-0001`), company_id, contact_id, owner_id, subject, written_on, sent_on, status_id, follow_up_on, recipient_response, comments, custom |
+| `memo_events` | même principe que `offer_events` |
+| `contracts` | company_id, opportunity_id, offer_id, owner_id, title, signed_on, amount, currency, start_on, end_on, custom |
+| `objectives` | user_id (null = objectif collectif), metric_key, period_type, period_start, period_end, target_value, currency |
+
+\* saisis à la main uniquement si la marque est en mode déclaratif pour cet indicateur (section 6).
+
+### Marketing
+
+| Table | Colonnes principales |
+|---|---|
+| `platforms` | key, label, kind (`social`, `ads`, `web`), is_active. Liste commune et extensible |
+| `social_accounts` | platform_id, name, handle, url, is_active |
+| `social_snapshots` | account_id, period_start, period_end, followers_total, followers_new, reach, impressions, posts, interactions, clicks, source |
+| `campaigns` | platform_id, name, objective, start_on, end_on, planned_budget, currency, budget_line_id, status, external_id, custom |
+| `campaign_snapshots` | campaign_id, period_start, period_end, spend, currency, impressions, reach, clicks, leads, conversions, conversion_value, source |
+| `websites` | name, url, ga4_property_id, search_console_url (vides tant qu'aucune connexion n'existe) |
+| `website_snapshots` | website_id, period_start, period_end, users, sessions, page_views, conversions, form_submissions, source |
+| `website_traffic_sources` | snapshot_id, channel (organique, direct, réseaux sociaux, payant, référent, e-mail, autre), sessions, users, conversions |
+| `website_goals` | website_id, name, metric_key, target_value |
+
+Une **contrainte d'exclusion** (`btree_gist`) interdit deux relevés dont les périodes se chevauchent pour un même compte, une même campagne ou un même site. Deux imports de la même semaine ne peuvent donc pas s'additionner.
+
+### Budgets
+
+| Table | Colonnes principales |
+|---|---|
+| `budgets` | name, scope (`marketing`, `commercial`), period_start, period_end, amount, currency, status |
+| `budget_lines` | budget_id, channel (liste), campaign_id, label, amount, currency |
+| `expenses` | budget_line_id, campaign_id, supplier, description, expense_date, amount, currency, status (`committed`, `paid`), source, external_ref, import_batch_id |
+| `fx_rates` | rate_date, from_currency, to_currency, rate, source |
+
+### Imports
+
+| Table | Rôle |
+|---|---|
+| `import_batches` | brand_id, entity, fichier (Storage), mapping jsonb, status (`uploaded`, `mapped`, `validated`, `committed`, `rolled_back`, `failed`), compteurs, auteur, dates |
+| `import_rows` | batch_id, row_number, raw jsonb, normalized jsonb, errors jsonb, duplicate_of, action (`insert`, `update`, `skip`) |
+| `import_mappings` | modèles de correspondance de colonnes réutilisables |
+| `historical_metrics` | brand_id, user_id, metric_key, period_start, period_end, value, currency, import_batch_id. Chiffres agrégés d'avant MAXreport, séparés des enregistrements CRM |
+
+---
+
+## 5. Personnalisation sans code
+
+### Ce que les administrateurs configurent
+
+| Besoin | Stockage | Qui |
+|---|---|---|
+| Créer et modifier des marques | `brands` | super-administrateur |
+| Ajouter des collaborateurs, attribuer des rôles | `memberships` | super-administrateur ; administrateur de marque pour sa marque, sans rôle global |
+| Rôles et permissions | `roles`, `role_permissions` | super-administrateur |
+| Champs personnalisés, champs obligatoires | `custom_field_definitions` | administrateur de marque |
+| Listes déroulantes | `option_lists`, `option_items` | administrateur de marque |
+| Statuts | `statuses` | administrateur de marque |
+| Étapes du pipeline | `pipeline_stages` | administrateur de marque |
+| Indicateurs actifs, source, seuils | `metric_settings` | administrateur de marque |
+| Objectifs | `objectives` | administrateur de marque, responsable commercial |
+| Modèles de rapports | `report_templates` | administrateur de marque, Direction |
+| Modules visibles par marque | `brand_modules` | super-administrateur |
+
+### Définition d'un champ personnalisé
+
+`custom_field_definitions` : brand_id, entity (`company`, `contact`, `opportunity`, `offer`, `memo`, `contract`, `weekly_report`, `campaign`, `expense`), key, label, help_text, type, options_list_id, required, validation jsonb, write_permission, position, is_active.
+
+- **Types** : texte court, texte long, nombre, montant (avec devise), date, oui/non, liste simple, liste multiple, collaborateur, URL, e-mail, téléphone.
+- **Validation** : obligatoire, minimum, maximum, longueur maximale, formats prédéfinis. Pas d'expressions régulières libres, qui peuvent bloquer le serveur.
+- **Stockage des valeurs** : dans la colonne `custom` de l'enregistrement. Elles héritent de sa RLS : un champ personnalisé ne peut rien montrer que la ligne elle-même ne montre pas.
+
+### Garde-fous
+
+1. La `key` est générée à la création (`^[a-z][a-z0-9_]{1,40}$`) puis figée. Le libellé reste modifiable.
+2. Le type d'un champ ne change plus dès qu'une valeur existe : il faut créer un nouveau champ.
+3. Supprimer un champ revient à l'archiver ; ses valeurs restent consultables dans l'historique.
+4. Double validation : un schéma Zod généré côté serveur (messages clairs pour l'utilisateur) **et** un trigger en base qui refuse les clés inconnues, les types invalides, les champs obligatoires vides et toute modification d'un champ sans la `write_permission` requise.
+5. Aucun écran n'exécute de SQL : on ne crée ni colonne ni table.
+6. Au plus 50 champs actifs par entité et par marque.
+7. Les calculs s'appuient sur la **catégorie** d'un statut (`success`, `failure`…), jamais sur son libellé. Renommer « Acceptée » en « Gagnée » ne casse aucun indicateur.
+
+### Statuts par défaut
+
+| Offres | Catégorie | Mémos | Catégorie |
+|---|---|---|---|
+| Brouillon | draft | En préparation | draft |
+| Envoyée | active | Envoyé | active |
+| Relance prévue | active | En attente de réponse | active |
+| En négociation | active | Relance prévue | active |
+| Acceptée | success | Réponse reçue | success |
+| Refusée | failure | Clôturé | closed |
+| Expirée | failure | | |
+
+---
+
+## 6. Règles de calcul et de consolidation
+
+### Périodes
+
+- Fuseau `Africa/Abidjan` (UTC+0, sans heure d'été).
+- Semaine ISO du lundi au dimanche ; mois, trimestre et année civils ; périodes personnalisées libres.
+- **Évolution** : comparaison avec la période précédente de même durée, et avec la même période de l'année précédente quand elle existe.
+
+### Une absence de donnée n'est pas un zéro
+
+Une valeur non saisie reste vide. Un ratio dont un terme manque, ou dont le dénominateur vaut 0, s'affiche « n/d », jamais 0.
+
+### Stocks, flux et indicateurs non additifs
+
+| Type | Exemples | Agrégation sur une période |
+|---|---|---|
+| Stock | abonnés | dernière valeur connue de la période |
+| Flux | nouveaux abonnés, impressions, clics, dépenses, leads | somme |
+| Non additif | portée, utilisateurs uniques d'un site | pas de somme : valeur relevée pour la période exacte, sinon « n/d » |
+
+### Formules
+
+| Indicateur | Formule |
+|---|---|
+| Taux d'engagement | interactions ÷ portée × 100 (à défaut ÷ impressions, et c'est signalé) |
+| CTR | clics ÷ impressions × 100 |
+| CPC | dépense ÷ clics |
+| CPM | dépense ÷ impressions × 1 000 |
+| CPL | dépense ÷ leads |
+| ROAS | valeur des conversions ÷ dépense |
+| Taux de conversion d'un site | conversions ÷ sessions × 100 |
+| Taux de transformation des offres | offres en `success` ÷ offres envoyées (hors `draft`), par date d'envoi |
+| Taux de réponse aux mémos | mémos en `success` ÷ mémos envoyés |
+| Pipeline pondéré | Σ montant × probabilité de l'étape, sur les opportunités `open` |
+| Chiffre d'affaires signé | Σ montants des contrats, par date de signature |
+| Taux d'atteinte | réalisé ÷ objectif × 100 |
+| Consommation budgétaire | engagé ÷ budget × 100, où engagé = dépenses `committed` + `paid` ; réalisé = dépenses `paid` |
+
+Ces formules vivent dans `src/lib/metrics` et sont couvertes par des tests automatisés.
+
+### Éviter les doubles comptages
+
+1. **Activités déclarées et dossiers CRM.** Pour chaque indicateur commercial, la marque choisit une seule source (`metric_settings.source`) :
+   - « opportunités créées » et « mémos réalisés » sont comptés depuis le CRM et les registres quand ces modules sont actifs. La fiche hebdomadaire les affiche alors en lecture seule ;
+   - appels, e-mails et rendez-vous qualifiés viennent des fiches hebdomadaires. Les `interactions` du CRM servent d'historique qualitatif et ne s'y ajoutent pas.
+2. **Historique importé et CRM.** Chaque marque a une date de bascule par module. Avant cette date, les tableaux lisent `historical_metrics` ; à partir de cette date, les enregistrements détaillés. Jamais les deux sur une même période.
+3. **Dépenses publicitaires.** Les indicateurs de performance (CPC, CPM, CPL, ROAS) utilisent toujours la dépense relevée sur la plateforme. Côté budget, une campagne compte ses dépenses saisies (factures) si elle en a, sinon sa dépense plateforme, marquée « non facturée ». Jamais les deux. À l'import, une dépense déjà présente (même campagne, même date, même montant ou même référence) est signalée comme doublon.
+4. **Relevés.** La contrainte d'exclusion empêche le chevauchement des périodes (section 4).
+5. **Marques.** Chaque enregistrement appartient à une seule marque. La consolidation additionne des marques distinctes : un même prospect suivi par deux marques compte une fois dans chacune, ce qui est voulu.
+
+### Devises
+
+- Le montant et la devise d'origine sont conservés ; la conversion se fait au moment du calcul, dans la devise de reporting (XOF par défaut).
+- Taux appliqué : le dernier taux connu à la date de l'opération (`fx_rates`).
+- EUR ↔ XOF : parité fixe 1 EUR = 655,957 XOF, enregistrée d'office.
+- USD : taux saisis (un par mois au minimum), avec leur source.
+- Taux manquant : le montant est exclu du total et une alerte le signale. Aucune conversion silencieuse.
+
+### Consolidation pour la Direction
+
+Les fonctions d'agrégation sont les mêmes que pour une marque, appliquées à toutes les marques visibles après conversion dans la devise de reporting. Elles s'exécutent avec les droits de l'utilisateur (`security invoker`), donc la RLS s'applique aussi aux totaux. Pas de vues matérialisées : elles échappent à la RLS.
+
+### Alertes
+
+- Budget : avertissement à 80 % d'engagement, dépassement au-delà de 100 % (seuils réglables par marque).
+- Relances : offres et mémos dont la date de relance est dépassée ; prospects sans relance planifiée.
+- Activités : fiche hebdomadaire non soumise le lundi suivant.
+- Données : taux de change manquant, import en erreur.
+
+---
+
+## 7. Plan de développement par sprints
+
+Un sprint est un lot livrable et vérifiable, développé sur sa propre branche avec une URL Preview Vercel.
+
+| Sprint | Contenu | Taille |
+|---|---|---|
+| **0 · Fondations** | projet Supabase dev, environnements Vercel, shadcn/ui, mise en page (menu, sélecteur de marque), Vitest, dossier `supabase/migrations`, types générés, `CLAUDE.md` avec les règles du projet | S |
+| **1 · Multimarque, utilisateurs, permissions** | marques, profils, rôles, permissions, affectations, `app.brands_with`, RLS, audit, invitation des collaborateurs, écrans marques et collaborateurs, tests d'isolation | L |
+| **2 · Personnalisation** | listes, statuts, pipeline, champs personnalisés (définition, rendu des formulaires, validation serveur et trigger), modules par marque | L |
+| **3 · Registres offres et mémos** | tables, références automatiques, fiches détaillées, chronologie, relances, pièces jointes privées, recherche, filtres, export Excel | M |
+| **4 · Commercial** | prospects, contacts, opportunités (vue kanban), interactions, fiches hebdomadaires, vues du responsable, contrats, objectifs | L |
+| **5 · Marketing** | plateformes, comptes sociaux, campagnes, sites, saisie des relevés, indicateurs et comparaisons | M |
+| **6 · Imports** | CSV et Excel, correspondance des colonnes, prévisualisation, validation, doublons, historique, annulation d'un lot, historique agrégé | M |
+| **7 · Budgets et dépenses** | budgets, lignes, dépenses, taux de change, budget / réalisé, alertes, règle anti-doublon des dépenses publicitaires | M |
+| **8 · Tableaux de bord et exports** | tableau de bord marque, tableau de bord Direction, objectifs et écarts, modèles de rapports, exports Excel et PDF | L |
+| **9 · Recette et mise en production** | revue de sécurité, performances (index), affichage mobile, données réelles, passage aux offres payantes, mise en production validée | M |
+
+### Vérifications à la fin de chaque étape
+
+- `npm run lint`, `npm run build` et `npm test` passent.
+- Migrations appliquées sur la base **dev uniquement**.
+- Tests RLS : un utilisateur de la marque A ne voit rien de la marque B ; un commercial ne voit que ses dossiers ; la Direction lit tout sans pouvoir modifier.
+- Conseillers Supabase (sécurité et performance) sans alerte.
+- Aucun secret côté navigateur : seules les variables `NEXT_PUBLIC_SUPABASE_*` y figurent.
+- URL Preview Vercel testée.
+- Fusion dans `main`, donc en production, uniquement après validation explicite.
+
+---
+
+## 8. Décisions à valider
+
+1. Créer le projet Supabase `MAXreport-dev` (gratuit) pour séparer développement et production.
+2. Liste des marques de départ, avec un code court par marque (ex. `RMXCI`).
+3. Rôles par défaut proposés en section 4.
+4. Devise de reporting de la Direction : XOF.
+5. Passage à Vercel Pro et Supabase Pro avant d'y mettre des données réelles.
