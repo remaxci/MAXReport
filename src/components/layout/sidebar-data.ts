@@ -10,6 +10,7 @@ export type SidebarBrand = {
   primaryColor: string | null;
   isActive: boolean;
   permissions: string[];
+  modules: string[];
 };
 
 export type SidebarData = {
@@ -26,6 +27,7 @@ export function toSidebarData(ctx: AuthContext): SidebarData {
       primaryColor: b.primaryColor,
       isActive: b.isActive,
       permissions: [...(ctx.access.byBrand.get(b.id) ?? [])],
+      modules: b.enabledModules,
     })),
     globalPermissions: [...ctx.access.global],
   };

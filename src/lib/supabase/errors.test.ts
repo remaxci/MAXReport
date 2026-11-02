@@ -38,6 +38,15 @@ describe("dbErrorMessage", () => {
     ).toBe("Valeur invalide.");
   });
 
+  it("explique une suppression bloquée par une référence", () => {
+    expect(
+      dbErrorMessage({
+        code: "23503",
+        message: 'update or delete on table "option_lists" violates foreign key constraint',
+      }),
+    ).toBe("Cet élément est encore utilisé ailleurs et ne peut pas être supprimé.");
+  });
+
   it("ne divulgue pas les erreurs inconnues", () => {
     expect(dbErrorMessage({ code: "XX000", message: "internal error at ..." })).toBe(
       "Une erreur est survenue. Réessayez.",

@@ -54,6 +54,16 @@ Après chaque étape : lint, tests, build, conseillers Supabase (sécurité et p
 - Premier super-administrateur d'une base : `select app.grant_super_admin('e-mail');`
   dans l'éditeur SQL Supabase.
 
+## Nouvelle table métier (offres, mémos, prospects…)
+
+- Colonnes `brand_id`, `custom jsonb not null default '{}'`, `created_at/by`, `updated_at`.
+- Clés composites `(brand_id, …)` vers les tables parentes, y compris `statuses`,
+  `pipeline_stages` et `option_lists` (elles exposent `unique (brand_id, id)`).
+- Triggers : `app.validate_custom_values('<fiche>')` (before insert or update),
+  `app.audit('brand_id')` (after), et la RLS par permission.
+- Formulaire : `<CustomFieldsInputs>` + `parseCustomFields()` pour les champs personnalisés.
+- Modules : masquer les pages d'un module désactivé (`brand.enabledModules`).
+
 ## Conventions
 
 - Interface en français, utilisable sur mobile.

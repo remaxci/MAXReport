@@ -26,6 +26,8 @@ export function dbErrorMessage(error: DbError): string {
     }
     case "23514":
       return message.includes("violates check constraint") ? "Valeur invalide." : message;
+    case "23503":
+      return "Cet élément est encore utilisé ailleurs et ne peut pas être supprimé.";
     case "P0001":
     case "P0002":
       return message;

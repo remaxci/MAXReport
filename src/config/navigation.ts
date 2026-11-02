@@ -21,6 +21,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { Permission } from "@/server/authz/permissions";
+import type { ModuleKey } from "./modules";
 
 export type NavItem = {
   title: string;
@@ -29,6 +30,8 @@ export type NavItem = {
   path?: string;
   /** Permission requise sur la marque pour afficher l'entrée. */
   permission?: Permission;
+  /** Module dont dépend l'entrée : masquée si le module est désactivé pour la marque. */
+  module?: ModuleKey;
 };
 
 export type NavGroup = {
@@ -36,7 +39,7 @@ export type NavGroup = {
   items: NavItem[];
 };
 
-// Menu d'une marque. Les modules seront aussi filtrés par marque (Sprint 2).
+// Menu d'une marque, filtré par permission et par modules activés.
 export const brandNavigation: NavGroup[] = [
   {
     label: "Pilotage",
@@ -48,29 +51,29 @@ export const brandNavigation: NavGroup[] = [
   {
     label: "Marketing",
     items: [
-      { title: "Réseaux sociaux", icon: Share2 },
-      { title: "Campagnes", icon: Megaphone },
-      { title: "Sites web", icon: Globe },
+      { title: "Réseaux sociaux", icon: Share2, module: "social" },
+      { title: "Campagnes", icon: Megaphone, module: "campaigns" },
+      { title: "Sites web", icon: Globe, module: "websites" },
     ],
   },
   {
     label: "Commercial",
     items: [
-      { title: "Activités hebdomadaires", icon: CalendarCheck },
-      { title: "Prospects", icon: Building },
-      { title: "Opportunités", icon: Handshake },
-      { title: "Offres", icon: FileText },
-      { title: "Mémos stratégiques", icon: NotebookPen },
-      { title: "Contrats", icon: Signature },
+      { title: "Activités hebdomadaires", icon: CalendarCheck, module: "activities" },
+      { title: "Prospects", icon: Building, module: "crm" },
+      { title: "Opportunités", icon: Handshake, module: "crm" },
+      { title: "Offres", icon: FileText, module: "offers" },
+      { title: "Mémos stratégiques", icon: NotebookPen, module: "memos" },
+      { title: "Contrats", icon: Signature, module: "contracts" },
     ],
   },
   {
     label: "Gestion",
     items: [
-      { title: "Objectifs", icon: Target },
-      { title: "Budgets", icon: Wallet },
-      { title: "Rapports", icon: ChartColumn },
-      { title: "Imports", icon: Upload },
+      { title: "Objectifs", icon: Target, module: "objectives" },
+      { title: "Budgets", icon: Wallet, module: "budgets" },
+      { title: "Rapports", icon: ChartColumn, module: "reports" },
+      { title: "Imports", icon: Upload, module: "imports" },
     ],
   },
   {

@@ -24,9 +24,10 @@ export function NavMain({ data }: { data: SidebarData }) {
   const brand = data.brands.find((b) => b.slug === slug) ?? null;
 
   const allowed = (item: NavItem) =>
-    !item.permission ||
-    data.globalPermissions.includes(item.permission) ||
-    (brand?.permissions.includes(item.permission) ?? false);
+    (!item.module || (brand?.modules.includes(item.module) ?? false)) &&
+    (!item.permission ||
+      data.globalPermissions.includes(item.permission) ||
+      (brand?.permissions.includes(item.permission) ?? false));
 
   const adminItems = adminNavigation.filter((item) =>
     data.globalPermissions.includes(item.permission),

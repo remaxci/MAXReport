@@ -3,7 +3,7 @@ import { dbErrorMessage } from "@/lib/supabase/errors";
 
 // État renvoyé par les Server Actions de formulaire (useActionState).
 export type ActionState =
-  | { ok: true; message: string }
+  | { ok: true; message: string; data?: string }
   | { ok: false; message: string; fieldErrors?: Record<string, string[] | undefined> }
   | null;
 

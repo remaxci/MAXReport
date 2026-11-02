@@ -326,11 +326,14 @@ Une **contrainte d'exclusion** (`btree_gist`) interdit deux relevés dont les p�
 - **Types** : texte court, texte long, nombre, montant (avec devise), date, oui/non, liste simple, liste multiple, collaborateur, URL, e-mail, téléphone.
 - **Validation** : obligatoire, minimum, maximum, longueur maximale, formats prédéfinis. Pas d'expressions régulières libres, qui peuvent bloquer le serveur.
 - **Stockage des valeurs** : dans la colonne `custom` de l'enregistrement. Elles héritent de sa RLS : un champ personnalisé ne peut rien montrer que la ligne elle-même ne montre pas.
+- **Mise en œuvre (Sprint 2)** : la validation en base est `app.custom_values_errors()`, branchée sur chaque table métier par le trigger `app.validate_custom_values('<fiche>')`. Côté serveur, `parseCustomFields()` (`src/features/custom-fields/parse.ts`) applique les mêmes règles pour afficher des messages champ par champ, et `<CustomFieldsInputs>` rend les champs dans n'importe quel formulaire.
+- **Valeurs par défaut** : à la création d'une marque, un trigger installe ses modules, 4 listes (sources, secteurs, objectifs de campagne, catégories de dépenses), les statuts des prospects, offres et mémos, et 5 étapes de pipeline.
 
 ### Garde-fous
 
 1. La `key` est générée à la création (`^[a-z][a-z0-9_]{1,40}$`) puis figée. Le libellé reste modifiable.
-2. Le type d'un champ ne change plus dès qu'une valeur existe : il faut créer un nouveau champ.
+2. Le type d'un champ (et sa liste de choix) est figé dès la création : pour changer de type, on crée un nouveau champ.
+   Un champ obligatoire est exigé à la création d'une fiche ; en modification, il bloque seulement si l'on vide une valeur existante, pour ne pas bloquer les fiches créées avant lui.
 3. Supprimer un champ revient à l'archiver ; ses valeurs restent consultables dans l'historique.
 4. Double validation : un schéma Zod généré côté serveur (messages clairs pour l'utilisateur) **et** un trigger en base qui refuse les clés inconnues, les types invalides, les champs obligatoires vides et toute modification d'un champ sans la `write_permission` requise.
 5. Aucun écran n'exécute de SQL : on ne crée ni colonne ni table.
@@ -425,6 +428,8 @@ Les fonctions d'agrégation sont les mêmes que pour une marque, appliquées à 
 ## 7. Plan de développement par sprints
 
 Un sprint est un lot livrable et vérifiable, développé sur sa propre branche avec une URL Preview Vercel.
+
+**Avancement :** Sprints 0, 1 et 2 livrés sur leurs branches (base de dev, Preview Vercel). Rien n'est encore en production.
 
 | Sprint | Contenu | Taille |
 |---|---|---|

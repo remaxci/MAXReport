@@ -11,6 +11,8 @@ export type BrandSummary = {
   primaryColor: string | null;
   reportingCurrency: string;
   isActive: boolean;
+  /** Modules activés pour la marque (voir Paramètres › Modules). */
+  enabledModules: string[];
 };
 
 export type AuthContext = {
@@ -29,7 +31,7 @@ export const getAuthContext = cache(async (): Promise<AuthContext> => {
   const user = await getCurrentUser();
   const supabase = await createClient();
 
-  const [profile, memberships, brands] = await Promise.all([
+  const [profile, memberships, brands, modules] = await Promise.all([
     supabase
       .from("profiles")
       .select("full_name, default_brand_id, is_active")
@@ -44,11 +46,18 @@ export const getAuthContext = cache(async (): Promise<AuthContext> => {
       .select("id, code, slug, name, primary_color, reporting_currency, is_active")
       .is("archived_at", null)
       .order("name"),
+    supabase.from("brand_modules").select("brand_id, module_key").eq("enabled", true),
   ]);
 
   if (profile.error) throw profile.error;
   if (memberships.error) throw memberships.error;
   if (brands.error) throw brands.error;
+  if (modules.error) throw modules.error;
+
+  const enabledModules = new Map<string, string[]>();
+  for (const m of modules.data) {
+    enabledModules.set(m.brand_id, [...(enabledModules.get(m.brand_id) ?? []), m.module_key]);
+  }
 
   // Un compte désactivé perd tous ses droits (la RLS fait de même).
   const isActive = profile.data?.is_active ?? false;
@@ -73,6 +82,7 @@ export const getAuthContext = cache(async (): Promise<AuthContext> => {
       primaryColor: b.primary_color,
       reportingCurrency: b.reporting_currency,
       isActive: b.is_active,
+      enabledModules: enabledModules.get(b.id) ?? [],
     })),
   };
 });

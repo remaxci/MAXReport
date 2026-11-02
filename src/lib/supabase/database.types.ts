@@ -53,6 +53,45 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_modules: {
+        Row: {
+          brand_id: string
+          enabled: boolean
+          module_key: string
+          settings: Json
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          enabled?: boolean
+          module_key: string
+          settings?: Json
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          enabled?: boolean
+          module_key?: string
+          settings?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_modules_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_modules_module_key_fkey"
+            columns: ["module_key"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       brands: {
         Row: {
           archived_at: string | null
@@ -104,6 +143,85 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_field_definitions: {
+        Row: {
+          brand_id: string
+          created_at: string
+          created_by: string | null
+          entity: string
+          help_text: string | null
+          id: string
+          is_active: boolean
+          key: string
+          label: string
+          options_list_id: string | null
+          position: number
+          required: boolean
+          type: string
+          updated_at: string
+          validation: Json
+          write_permission: string | null
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          created_by?: string | null
+          entity: string
+          help_text?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          label: string
+          options_list_id?: string | null
+          position?: number
+          required?: boolean
+          type: string
+          updated_at?: string
+          validation?: Json
+          write_permission?: string | null
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          created_by?: string | null
+          entity?: string
+          help_text?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          label?: string
+          options_list_id?: string | null
+          position?: number
+          required?: boolean
+          type?: string
+          updated_at?: string
+          validation?: Json
+          write_permission?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_field_definitions_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_field_definitions_brand_id_options_list_id_fkey"
+            columns: ["brand_id", "options_list_id"]
+            isOneToOne: false
+            referencedRelation: "option_lists"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "custom_field_definitions_write_permission_fkey"
+            columns: ["write_permission"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       memberships: {
         Row: {
           brand_id: string | null
@@ -153,6 +271,112 @@ export type Database = {
           },
         ]
       }
+      modules: {
+        Row: {
+          group_label: string
+          key: string
+          label: string
+          position: number
+        }
+        Insert: {
+          group_label: string
+          key: string
+          label: string
+          position?: number
+        }
+        Update: {
+          group_label?: string
+          key?: string
+          label?: string
+          position?: number
+        }
+        Relationships: []
+      }
+      option_items: {
+        Row: {
+          brand_id: string
+          color: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          list_id: string
+          position: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          brand_id: string
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          list_id: string
+          position?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          brand_id?: string
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          list_id?: string
+          position?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "option_items_brand_id_list_id_fkey"
+            columns: ["brand_id", "list_id"]
+            isOneToOne: false
+            referencedRelation: "option_lists"
+            referencedColumns: ["brand_id", "id"]
+          },
+        ]
+      }
+      option_lists: {
+        Row: {
+          brand_id: string
+          created_at: string
+          id: string
+          is_system: boolean
+          key: string
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          id?: string
+          is_system?: boolean
+          key: string
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          id?: string
+          is_system?: boolean
+          key?: string
+          label?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "option_lists_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           key: string
@@ -170,6 +394,56 @@ export type Database = {
           module?: string
         }
         Relationships: []
+      }
+      pipeline_stages: {
+        Row: {
+          brand_id: string
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_system: boolean
+          key: string
+          label: string
+          position: number
+          probability: number
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          category: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          key: string
+          label: string
+          position?: number
+          probability?: number
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          key?: string
+          label?: string
+          position?: number
+          probability?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_stages_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -278,6 +552,59 @@ export type Database = {
         }
         Relationships: []
       }
+      statuses: {
+        Row: {
+          brand_id: string
+          category: string
+          color: string | null
+          created_at: string
+          entity: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          key: string
+          label: string
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          category: string
+          color?: string | null
+          created_at?: string
+          entity: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          key: string
+          label: string
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          category?: string
+          color?: string | null
+          created_at?: string
+          entity?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          key?: string
+          label?: string
+          position?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "statuses_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -286,6 +613,10 @@ export type Database = {
       add_brand_member: {
         Args: { p_brand_id: string; p_email: string; p_role_id: string }
         Returns: string
+      }
+      reorder_config: {
+        Args: { p_brand_id: string; p_ids: string[]; p_table: string }
+        Returns: undefined
       }
     }
     Enums: {
