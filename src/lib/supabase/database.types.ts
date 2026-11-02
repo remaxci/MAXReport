@@ -143,6 +143,264 @@ export type Database = {
         }
         Relationships: []
       }
+      commercial_documents: {
+        Row: {
+          amount: number | null
+          archived_at: string | null
+          brand_id: string
+          comments: string | null
+          company_id: string
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          custom: Json
+          follow_up_on: string | null
+          id: string
+          issued_on: string
+          kind: string
+          owner_id: string
+          recipient_response: string | null
+          reference: string
+          sent_on: string | null
+          status_id: string
+          subject: string
+          updated_at: string
+          updated_by: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          amount?: number | null
+          archived_at?: string | null
+          brand_id: string
+          comments?: string | null
+          company_id: string
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          custom?: Json
+          follow_up_on?: string | null
+          id?: string
+          issued_on?: string
+          kind: string
+          owner_id?: string
+          recipient_response?: string | null
+          reference?: string
+          sent_on?: string | null
+          status_id: string
+          subject: string
+          updated_at?: string
+          updated_by?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          amount?: number | null
+          archived_at?: string | null
+          brand_id?: string
+          comments?: string | null
+          company_id?: string
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          custom?: Json
+          follow_up_on?: string | null
+          id?: string
+          issued_on?: string
+          kind?: string
+          owner_id?: string
+          recipient_response?: string | null
+          reference?: string
+          sent_on?: string | null
+          status_id?: string
+          subject?: string
+          updated_at?: string
+          updated_by?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_documents_brand_id_company_id_fkey"
+            columns: ["brand_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "commercial_documents_brand_id_contact_id_fkey"
+            columns: ["brand_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "commercial_documents_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_documents_brand_id_status_id_fkey"
+            columns: ["brand_id", "status_id"]
+            isOneToOne: false
+            referencedRelation: "statuses"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "commercial_documents_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          archived_at: string | null
+          brand_id: string
+          city: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          custom: Json
+          email: string | null
+          id: string
+          name: string
+          next_follow_up_on: string | null
+          owner_id: string | null
+          phone: string | null
+          sector: string | null
+          source: string | null
+          status_id: string | null
+          updated_at: string
+          updated_by: string | null
+          website: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          brand_id: string
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom?: Json
+          email?: string | null
+          id?: string
+          name: string
+          next_follow_up_on?: string | null
+          owner_id?: string | null
+          phone?: string | null
+          sector?: string | null
+          source?: string | null
+          status_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          website?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          brand_id?: string
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom?: Json
+          email?: string | null
+          id?: string
+          name?: string
+          next_follow_up_on?: string | null
+          owner_id?: string | null
+          phone?: string | null
+          sector?: string | null
+          source?: string | null
+          status_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "companies_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companies_brand_id_status_id_fkey"
+            columns: ["brand_id", "status_id"]
+            isOneToOne: false
+            referencedRelation: "statuses"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "companies_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          archived_at: string | null
+          brand_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          custom: Json
+          email: string | null
+          full_name: string
+          id: string
+          job_title: string | null
+          phone: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          brand_id: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          custom?: Json
+          email?: string | null
+          full_name: string
+          id?: string
+          job_title?: string | null
+          phone?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          brand_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          custom?: Json
+          email?: string | null
+          full_name?: string
+          id?: string
+          job_title?: string | null
+          phone?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_brand_id_company_id_fkey"
+            columns: ["brand_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["brand_id", "id"]
+          },
+        ]
+      }
       custom_field_definitions: {
         Row: {
           brand_id: string
@@ -219,6 +477,88 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "permissions"
             referencedColumns: ["key"]
+          },
+        ]
+      }
+      document_attachments: {
+        Row: {
+          brand_id: string
+          created_at: string
+          document_id: string
+          file_name: string
+          id: string
+          mime_type: string
+          size_bytes: number
+          storage_path: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          document_id: string
+          file_name: string
+          id?: string
+          mime_type: string
+          size_bytes: number
+          storage_path: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          document_id?: string
+          file_name?: string
+          id?: string
+          mime_type?: string
+          size_bytes?: number
+          storage_path?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_attachments_brand_id_document_id_fkey"
+            columns: ["brand_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_documents"
+            referencedColumns: ["brand_id", "id"]
+          },
+        ]
+      }
+      document_events: {
+        Row: {
+          actor_id: string | null
+          brand_id: string
+          document_id: string
+          id: string
+          occurred_at: string
+          payload: Json
+          type: string
+        }
+        Insert: {
+          actor_id?: string | null
+          brand_id: string
+          document_id: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          type: string
+        }
+        Update: {
+          actor_id?: string | null
+          brand_id?: string
+          document_id?: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_events_brand_id_document_id_fkey"
+            columns: ["brand_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_documents"
+            referencedColumns: ["brand_id", "id"]
           },
         ]
       }
@@ -613,6 +953,14 @@ export type Database = {
       add_brand_member: {
         Args: { p_brand_id: string; p_email: string; p_role_id: string }
         Returns: string
+      }
+      brand_member_options: {
+        Args: { p_brand_id: string }
+        Returns: {
+          is_global: boolean
+          label: string
+          user_id: string
+        }[]
       }
       reorder_config: {
         Args: { p_brand_id: string; p_ids: string[]; p_table: string }

@@ -14,6 +14,14 @@ export const PERMISSIONS = [
   "audit.read",
   "settings.manage",
   "modules.manage",
+  "offers.read_all",
+  "offers.manage_all",
+  "offers.manage_own",
+  "memos.read_all",
+  "memos.manage_all",
+  "memos.manage_own",
+  "crm.read",
+  "crm.manage",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

@@ -45,16 +45,52 @@ function text(form: FormReader, name: string): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/** La saisie reprend-elle exactement la valeur déjà enregistrée ? */
+function isUnchanged(field: FieldDefinition, form: FormReader, previous: unknown): boolean {
+  if (previous === undefined || previous === null) return false;
+  const name = inputName(field.key);
+  switch (field.type) {
+    case "number":
+      return parseNumber(text(form, name)) === previous;
+    case "money": {
+      const p = previous as { amount?: unknown; currency?: unknown };
+      return (
+        parseNumber(text(form, inputName(field.key, "amount"))) === p.amount &&
+        text(form, inputName(field.key, "currency")) === p.currency
+      );
+    }
+    case "multiselect": {
+      if (!Array.isArray(previous)) return false;
+      const chosen = new Set(form.getAll(name).filter((v) => typeof v === "string" && v !== ""));
+      return chosen.size === previous.length && previous.every((v) => chosen.has(v));
+    }
+    case "boolean":
+      return false;
+    default:
+      return text(form, name) === previous;
+  }
+}
+
+/**
+ * Lit et valide les champs actifs. `previous` (valeurs déjà enregistrées) :
+ * une valeur re-soumise à l'identique est conservée sans être revalidée, pour
+ * qu'un choix désactivé ou une règle durcie ne bloque pas les fiches existantes.
+ */
 export function parseCustomFields(
   fields: readonly FieldDefinition[],
   form: FormReader,
   allowedUserIds: ReadonlySet<string> = new Set(),
+  previous: Record<string, unknown> = {},
 ): ParseResult {
   const values: Record<string, CustomValue> = {};
   const errors: Record<string, string> = {};
 
   for (const field of fields) {
     if (!field.isActive) continue;
+    if (isUnchanged(field, form, previous[field.key])) {
+      values[field.key] = previous[field.key] as CustomValue;
+      continue;
+    }
     const name = inputName(field.key);
     const { min, max, max_length: maxLength } = field.validation;
     const fail = (message: string) => {

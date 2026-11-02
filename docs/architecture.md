@@ -256,10 +256,9 @@ Le `(select …)` fait évaluer la fonction une seule fois par requête, pas à 
 | `opportunities` | company_id, contact_id, owner_id, title, stage_id, amount, currency, expected_close_on, source, lost_reason, custom |
 | `interactions` | company_id, opportunity_id, contact_id, user_id, type (appel, e-mail, rendez-vous, note), occurred_at, summary |
 | `weekly_reports` | user_id, week_start (lundi), calls_prospecting, calls_follow_up, emails_sent, qualified_meetings, opportunities_created\*, memos_done\*, comments, status (`draft`, `submitted`, `validated`), custom ; unique (brand_id, user_id, week_start) |
-| `offers` | reference (automatique, ex. `OF-RMXCI-2026-0001`), company_id, contact_id, owner_id, subject, created_on, sent_on, amount, currency, status_id, next_follow_up_on, valid_until, comments, custom |
-| `offer_events` | offer_id, type (création, envoi, relance prévue, relance faite, changement de statut, commentaire), occurred_at, actor_id, payload |
-| `memos` | reference (automatique, ex. `MS-RMXCI-2026-0001`), company_id, contact_id, owner_id, subject, written_on, sent_on, status_id, follow_up_on, recipient_response, comments, custom |
-| `memo_events` | même principe que `offer_events` |
+| `commercial_documents` | **offres et mémos dans une même table** (colonne `kind` : `offer` ou `memo`), écrans distincts. reference (automatique : `OF-CODE-2026-0001`, `MS-CODE-2026-0001`), company_id, contact_id, owner_id, subject, issued_on (création ou rédaction), sent_on, status_id, follow_up_on, comments, custom ; offres seules : amount, currency, valid_until ; mémos seuls : recipient_response |
+| `document_events` | chronologie : création, modification, changement de statut, envoi, relance prévue, relance faite, commentaire, pièce jointe, archivage. Alimentée par triggers ; seuls les commentaires et relances faites se saisissent |
+| `document_attachments` | pièces jointes (bucket privé `attachments`, chemin `{brand_id}/{document_id}/…`, 4 Mo au plus) |
 | `contracts` | company_id, opportunity_id, offer_id, owner_id, title, signed_on, amount, currency, start_on, end_on, custom |
 | `objectives` | user_id (null = objectif collectif), metric_key, period_type, period_start, period_end, target_value, currency |
 
@@ -429,7 +428,7 @@ Les fonctions d'agrégation sont les mêmes que pour une marque, appliquées à 
 
 Un sprint est un lot livrable et vérifiable, développé sur sa propre branche avec une URL Preview Vercel.
 
-**Avancement :** Sprints 0, 1 et 2 livrés sur leurs branches (base de dev, Preview Vercel). Rien n'est encore en production.
+**Avancement :** Sprints 0 à 3 livrés sur leurs branches (base de dev, Preview Vercel). Rien n'est encore en production. Le Sprint 3 a créé une version minimale des prospects et contacts (`companies`, `contacts`), que le Sprint 4 complète.
 
 | Sprint | Contenu | Taille |
 |---|---|---|

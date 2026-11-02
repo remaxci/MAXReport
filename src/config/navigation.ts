@@ -28,8 +28,8 @@ export type NavItem = {
   icon: LucideIcon;
   /** Chemin relatif à /m/[marque]. Absent tant que le module n'est pas développé. */
   path?: string;
-  /** Permission requise sur la marque pour afficher l'entrée. */
-  permission?: Permission;
+  /** Permission requise sur la marque pour afficher l'entrée (une liste : l'une d'elles suffit). */
+  permission?: Permission | Permission[];
   /** Module dont dépend l'entrée : masquée si le module est désactivé pour la marque. */
   module?: ModuleKey;
 };
@@ -62,8 +62,20 @@ export const brandNavigation: NavGroup[] = [
       { title: "Activités hebdomadaires", icon: CalendarCheck, module: "activities" },
       { title: "Prospects", icon: Building, module: "crm" },
       { title: "Opportunités", icon: Handshake, module: "crm" },
-      { title: "Offres", icon: FileText, module: "offers" },
-      { title: "Mémos stratégiques", icon: NotebookPen, module: "memos" },
+      {
+        title: "Offres",
+        icon: FileText,
+        module: "offers",
+        path: "/offres",
+        permission: ["offers.read_all", "offers.manage_all", "offers.manage_own"],
+      },
+      {
+        title: "Mémos stratégiques",
+        icon: NotebookPen,
+        module: "memos",
+        path: "/memos",
+        permission: ["memos.read_all", "memos.manage_all", "memos.manage_own"],
+      },
       { title: "Contrats", icon: Signature, module: "contracts" },
     ],
   },

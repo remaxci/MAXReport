@@ -161,6 +161,35 @@ describe("parseCustomFields", () => {
     expect(errors).toEqual({});
   });
 
+  it("conserve une valeur inchangée même si elle n'est plus valide", () => {
+    const fields = [
+      field({ key: "source", type: "select", options: sources }),
+      field({ key: "ref", type: "text", validation: { max_length: 3 } }),
+    ];
+    const previous = { source: "partenaire", ref: "ANCIEN" };
+    const { values, errors } = parseCustomFields(
+      fields,
+      form([
+        [inputName("source"), "partenaire"],
+        [inputName("ref"), "ANCIEN"],
+      ]),
+      new Set(),
+      previous,
+    );
+    expect(errors).toEqual({});
+    expect(values).toEqual(previous);
+  });
+
+  it("revalide une valeur modifiée", () => {
+    const { errors } = parseCustomFields(
+      [field({ key: "ref", type: "text", validation: { max_length: 3 } })],
+      form([[inputName("ref"), "NOUVEAU"]]),
+      new Set(),
+      { ref: "ANC" },
+    );
+    expect(errors[inputName("ref")]).toBe("3 caractères au maximum.");
+  });
+
   it("enregistre « non » pour une case décochée", () => {
     const { values } = parseCustomFields([field({ key: "vip", type: "boolean" })], form([]));
     expect(values).toEqual({ vip: false });

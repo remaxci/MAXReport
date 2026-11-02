@@ -23,11 +23,12 @@ export function NavMain({ data }: { data: SidebarData }) {
   const slug = currentBrandSlug(pathname) ?? data.brands.find((b) => b.isActive)?.slug;
   const brand = data.brands.find((b) => b.slug === slug) ?? null;
 
+  const holds = (permission: string) =>
+    data.globalPermissions.includes(permission) || (brand?.permissions.includes(permission) ?? false);
   const allowed = (item: NavItem) =>
     (!item.module || (brand?.modules.includes(item.module) ?? false)) &&
     (!item.permission ||
-      data.globalPermissions.includes(item.permission) ||
-      (brand?.permissions.includes(item.permission) ?? false));
+      (Array.isArray(item.permission) ? item.permission.some(holds) : holds(item.permission)));
 
   const adminItems = adminNavigation.filter((item) =>
     data.globalPermissions.includes(item.permission),

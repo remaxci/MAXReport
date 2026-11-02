@@ -276,6 +276,14 @@ begin
   e := app.custom_values_errors(x, 'offer', v_valid || '{"source": "partenaire"}');
   if cardinality(e) = 0 then raise exception 'ECHEC validation : choix désactivé accepté'; end if;
 
+  -- Une fiche qui portait déjà ce choix reste modifiable.
+  e := app.custom_values_errors(x, 'offer',
+    v_valid || '{"source": "partenaire", "surface": 200}',
+    v_valid || '{"source": "partenaire"}');
+  if cardinality(e) <> 0 then
+    raise exception 'ECHEC validation : valeur inchangée revalidée (%)', array_to_string(e, ' | ');
+  end if;
+
   e := app.custom_values_errors(x, 'offer', v_valid || '{"secteurs": ["immobilier", "inexistant"]}');
   if cardinality(e) = 0 then raise exception 'ECHEC validation : choix multiple invalide accepté'; end if;
 
