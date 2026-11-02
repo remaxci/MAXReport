@@ -36,7 +36,23 @@ Après chaque étape : lint, tests, build, conseillers Supabase (sécurité et p
    `<version>` étant celle renvoyée par `list_migrations`.
 3. Régénérer `src/lib/supabase/database.types.ts` (`generate_typescript_types`).
 4. Vérifier les conseillers (`get_advisors`, sécurité et performance).
-5. La production reçoit les migrations au moment de la fusion validée.
+5. Lancer les tests RLS de `supabase/tests/` sur dev (`execute_sql` avec le contenu du
+   fichier). Chaque script crée ses données dans une transaction annulée à la fin, et
+   s'arrête sur la première règle non respectée (« ECHEC … »). Toute nouvelle table
+   métier ajoute ses cas : isolation entre marques, propriétaire, Direction en lecture seule.
+6. La production reçoit les migrations au moment de la fusion validée.
+
+## Permissions
+
+- Catalogue : table `permissions` (migrations) et miroir TypeScript dans
+  `src/server/authz/permissions.ts`. Une nouvelle permission s'ajoute aux deux, et au rôle
+  `super_admin`.
+- RLS : `brand_id = any ((select app.brands_with('x.y'))::uuid[])` ; le cast `::uuid[]`
+  est obligatoire. Pour un contrôle sans marque : `(select app.has_global_permission('x.y'))`.
+- Côté serveur : `getAuthContext()` dans les pages (derrière `<Suspense>`),
+  `authorize(permission, brandId)` au début de chaque Server Action.
+- Premier super-administrateur d'une base : `select app.grant_super_admin('e-mail');`
+  dans l'éditeur SQL Supabase.
 
 ## Conventions
 

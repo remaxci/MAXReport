@@ -1,5 +1,6 @@
 import {
   Building,
+  Building2,
   CalendarCheck,
   ChartColumn,
   ChartNoAxesCombined,
@@ -11,18 +12,23 @@ import {
   NotebookPen,
   Settings,
   Share2,
+  ShieldCheck,
   Signature,
   Target,
   Upload,
+  Users,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
+import type { Permission } from "@/server/authz/permissions";
 
 export type NavItem = {
   title: string;
   icon: LucideIcon;
-  // Absent tant que le module n'est pas développé : l'entrée s'affiche grisée.
-  href?: string;
+  /** Chemin relatif à /m/[marque]. Absent tant que le module n'est pas développé. */
+  path?: string;
+  /** Permission requise sur la marque pour afficher l'entrée. */
+  permission?: Permission;
 };
 
 export type NavGroup = {
@@ -30,13 +36,12 @@ export type NavGroup = {
   items: NavItem[];
 };
 
-// Menu principal. Au Sprint 1, les entrées deviendront propres à chaque marque
-// (/m/[marque]/...) et filtrées selon les modules activés et les permissions.
-export const navigation: NavGroup[] = [
+// Menu d'une marque. Les modules seront aussi filtrés par marque (Sprint 2).
+export const brandNavigation: NavGroup[] = [
   {
     label: "Pilotage",
     items: [
-      { title: "Tableau de bord", icon: LayoutDashboard, href: "/" },
+      { title: "Tableau de bord", icon: LayoutDashboard, path: "" },
       { title: "Vue Direction", icon: ChartNoAxesCombined },
     ],
   },
@@ -69,7 +74,30 @@ export const navigation: NavGroup[] = [
     ],
   },
   {
-    label: "Administration",
-    items: [{ title: "Paramètres", icon: Settings }],
+    label: "Marque",
+    items: [
+      { title: "Paramètres", icon: Settings, path: "/parametres", permission: "members.read" },
+    ],
   },
 ];
+
+export type AdminNavItem = {
+  title: string;
+  icon: LucideIcon;
+  href: string;
+  /** Permission globale requise. */
+  permission: Permission;
+};
+
+// Administration de toutes les marques : rôles globaux uniquement.
+export const adminNavigation: AdminNavItem[] = [
+  { title: "Marques", icon: Building2, href: "/parametres/marques", permission: "brands.manage" },
+  { title: "Utilisateurs", icon: Users, href: "/parametres/utilisateurs", permission: "users.manage" },
+  { title: "Rôles et permissions", icon: ShieldCheck, href: "/parametres/roles", permission: "users.manage" },
+];
+
+/** Marque courante d'après l'URL (/m/[marque]/…). */
+export function currentBrandSlug(pathname: string): string | null {
+  const match = pathname.match(/^\/m\/([^/]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}

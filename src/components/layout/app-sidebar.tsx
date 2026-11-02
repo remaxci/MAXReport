@@ -7,25 +7,28 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getCurrentUser } from "@/server/authz/current-user";
+import { getAuthContext } from "@/server/authz/context";
+import { BrandSwitcher } from "./brand-switcher";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
+import { toSidebarData } from "./sidebar-data";
 
+// Les parties qui lisent la session sont derrière un Suspense (Cache Components).
+// Pas de SidebarMenuSkeleton : il utilise Math.random(), refusé au prérendu.
 export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        {/* Le sélecteur de marque prendra cette place au Sprint 1. */}
-        <div className="flex h-12 items-center px-2 font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
-          MAXreport
-        </div>
+        <Suspense fallback={<Skeleton className="h-12 w-full rounded-md" />}>
+          <SidebarBrand />
+        </Suspense>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain />
+        <Suspense fallback={<NavSkeleton />}>
+          <SidebarNav />
+        </Suspense>
       </SidebarContent>
       <SidebarFooter>
-        {/* Lit la session : doit rester derrière un Suspense (Cache Components). */}
-        {/* Pas de SidebarMenuSkeleton : il utilise Math.random(), refusé au prérendu. */}
         <Suspense fallback={<Skeleton className="h-12 w-full rounded-md" />}>
           <SidebarUser />
         </Suspense>
@@ -35,7 +38,27 @@ export function AppSidebar() {
   );
 }
 
+async function SidebarBrand() {
+  const ctx = await getAuthContext();
+  return <BrandSwitcher brands={toSidebarData(ctx).brands} />;
+}
+
+async function SidebarNav() {
+  const ctx = await getAuthContext();
+  return <NavMain data={toSidebarData(ctx)} />;
+}
+
 async function SidebarUser() {
-  const user = await getCurrentUser();
-  return <NavUser email={user.email} />;
+  const ctx = await getAuthContext();
+  return <NavUser email={ctx.email} name={ctx.fullName} />;
+}
+
+function NavSkeleton() {
+  return (
+    <div className="flex flex-col gap-2 p-2">
+      {["w-3/4", "w-2/3", "w-4/5", "w-1/2", "w-3/5"].map((width) => (
+        <Skeleton key={width} className={`h-7 ${width}`} />
+      ))}
+    </div>
+  );
 }

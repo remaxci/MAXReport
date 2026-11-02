@@ -49,8 +49,26 @@ Preview et Development, et celles de prod pour Production.
 
 ## Comptes utilisateurs
 
-Il n'y a pas d'inscription publique. Les comptes se créent dans Supabase :
-Authentication > Users > Add user. L'invitation depuis l'application arrive au Sprint 1.
+Il n'y a pas d'inscription publique.
+
+1. Créer le compte dans Supabase : Authentication › Users › Add user (cocher Auto Confirm User).
+2. Premier super-administrateur d'une base, dans l'éditeur SQL de Supabase :
+   `select app.grant_super_admin('prenom.nom@exemple.com');`
+3. Ensuite, tout se fait dans MAXreport :
+   - Administration › Marques : créer les marques ;
+   - Administration › Utilisateurs : rôles globaux (Direction, super-administrateur), activation ;
+   - Paramètres de la marque : collaborateurs et rôles par marque.
+
+L'invitation par e-mail depuis MAXreport nécessitera un service d'envoi d'e-mails
+(SMTP) configuré dans Supabase.
+
+| Rôle | Portée | Droits |
+|---|---|---|
+| Super-administrateur | toutes les marques | tout |
+| Direction | toutes les marques | lecture, collaborateurs en lecture, journal |
+| Administrateur de marque | une marque | informations et collaborateurs de la marque, journal |
+| Responsable commercial | une marque | accès, collaborateurs en lecture |
+| Commercial, Marketing, Lecture | une marque | accès (les droits des modules arrivent avec eux) |
 
 ## Organisation du code
 
@@ -65,3 +83,4 @@ Authentication > Users > Add user. L'invitation depuis l'application arrive au S
 | `src/config/navigation.ts` | entrées du menu |
 | `src/proxy.ts` | rafraîchit la session, renvoie vers `/login` si besoin |
 | `supabase/migrations/` | migrations SQL versionnées |
+| `supabase/tests/` | tests d'isolation RLS (à lancer sur la base dev) |

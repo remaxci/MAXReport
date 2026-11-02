@@ -1,29 +1,31 @@
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { Notice, Page, PageSkeleton } from "@/components/page";
+import { getAuthContext } from "@/server/authz/context";
+import { can } from "@/server/authz/permissions";
 
-export default function DashboardPage() {
+// Accueil : envoie l'utilisateur vers sa marque par défaut, ou la première accessible.
+export default function HomePage() {
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Tableau de bord</h1>
-        <p className="text-sm text-muted-foreground">
-          Vue d&apos;ensemble des performances de la marque.
-        </p>
-      </div>
+    <Suspense fallback={<PageSkeleton />}>
+      <HomeRedirect />
+    </Suspense>
+  );
+}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Aucune donnée pour l&apos;instant</CardTitle>
-          <CardDescription>
-            Les indicateurs s&apos;afficheront ici dès que les modules marketing,
-            commercial et budgets seront en place.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    </div>
+async function HomeRedirect() {
+  const ctx = await getAuthContext();
+  const active = ctx.brands.filter((b) => b.isActive);
+  const target = active.find((b) => b.id === ctx.defaultBrandId) ?? active[0];
+
+  if (target) redirect(`/m/${target.slug}`);
+  if (can(ctx.access, "brands.manage")) redirect("/parametres/marques");
+
+  return (
+    <Page>
+      <Notice title="Aucune marque">
+        Aucune marque ne vous est encore attribuée. Contactez un administrateur de MAXreport.
+      </Notice>
+    </Page>
   );
 }
