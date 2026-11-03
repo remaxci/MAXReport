@@ -8,6 +8,8 @@ import type { Cell } from "./values";
 export const MAX_IMPORT_BYTES = 4 * 1024 * 1024;
 export const MAX_IMPORT_ROWS = 5000;
 export const MAX_IMPORT_COLUMNS = 60;
+/** Taille décompressée maximale d'un classeur Excel (protection contre les « bombes zip »). */
+export const MAX_XLSX_UNCOMPRESSED = 60 * 1024 * 1024;
 export const IMPORT_ACCEPT = ".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 export type Sheet = {
@@ -39,6 +41,35 @@ function excelCell(value: ExcelJS.CellValue): Cell {
   if ("hyperlink" in value) return String((value as ExcelJS.CellHyperlinkValue).text ?? "");
   if ("error" in value) return null;
   return null;
+}
+
+/**
+ * Taille totale décompressée annoncée par le répertoire central d'une archive
+ * zip (un fichier .xlsx en est une), sans rien décompresser. null : archive
+ * illisible, ou au format zip64 (fichiers de plus de 4 Go).
+ */
+export function zipUncompressedSize(bytes: Uint8Array): number | null {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  // Fin du répertoire central : signature 0x06054b50, dans les 64 derniers Ko.
+  let eocd = -1;
+  for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65_557); i--) {
+    if (view.getUint32(i, true) === 0x06054b50) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd < 0) return null;
+  const entries = view.getUint16(eocd + 10, true);
+  let offset = view.getUint32(eocd + 16, true);
+  let total = 0;
+  for (let n = 0; n < entries; n++) {
+    if (offset + 46 > bytes.length || view.getUint32(offset, true) !== 0x02014b50) return null;
+    const size = view.getUint32(offset + 24, true);
+    if (size === 0xffffffff) return null;
+    total += size;
+    offset += 46 + view.getUint16(offset + 28, true) + view.getUint16(offset + 30, true) + view.getUint16(offset + 32, true);
+  }
+  return total;
 }
 
 /** En-têtes uniques et non vides ; colonnes et lignes vides de fin retirées. */
@@ -78,6 +109,10 @@ export async function readSpreadsheet(name: string, bytes: Uint8Array): Promise<
     return shapeSheet(table);
   }
   if (extension !== "xlsx") return { ok: false, message: "Format non accepté : CSV ou Excel (.xlsx)." };
+
+  const inflated = zipUncompressedSize(bytes);
+  if (inflated === null) return { ok: false, message: "Fichier Excel illisible." };
+  if (inflated > MAX_XLSX_UNCOMPRESSED) return { ok: false, message: "Classeur trop volumineux une fois décompressé." };
 
   const workbook = new ExcelJS.Workbook();
   try {

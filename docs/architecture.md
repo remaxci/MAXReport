@@ -430,7 +430,7 @@ Les fonctions d'agrégation sont les mêmes que pour une marque, appliquées à 
 
 Un sprint est un lot livrable et vérifiable, développé sur sa propre branche avec une URL Preview Vercel.
 
-**Avancement :** Sprints 0 à 8 livrés sur leurs branches (base de dev, Preview Vercel). Rien n'est encore en production. Le Sprint 4 a été découpé : 4a (prospects, contacts, échanges, opportunités, contrats) puis 4b (fiches d'activité hebdomadaire, vues du responsable, objectifs).
+**Avancement :** Sprints 0 à 8 livrés sur leurs branches (base de dev, Preview Vercel) ; Sprint 9 : recette faite, mise en production prête et en attente de validation (procédure : [mise-en-production.md](mise-en-production.md)). Rien n'est encore en production. Le Sprint 4 a été découpé : 4a (prospects, contacts, échanges, opportunités, contrats) puis 4b (fiches d'activité hebdomadaire, vues du responsable, objectifs).
 
 **Décision Sprint 4a :** l'annuaire des prospects est partagé au sein d'une marque (permission `crm.read`) pour éviter les doublons d'entreprises ; les opportunités, offres, mémos et contrats restent personnels pour les commerciaux (`*.manage_own`).
 

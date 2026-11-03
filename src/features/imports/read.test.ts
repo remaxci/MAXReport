@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import { describe, expect, it } from "vitest";
-import { decodeText, readSpreadsheet, shapeSheet } from "./read";
+import { decodeText, readSpreadsheet, shapeSheet, zipUncompressedSize } from "./read";
 
 describe("decodeText", () => {
   it("lit l'UTF-8 et, à défaut, le Windows-1252 d'Excel", () => {
@@ -56,6 +56,25 @@ describe("readSpreadsheet", () => {
     expect(await readSpreadsheet("photo.png", new Uint8Array([1]))).toEqual({
       ok: false,
       message: "Format non accepté : CSV ou Excel (.xlsx).",
+    });
+  });
+});
+
+describe("zipUncompressedSize", () => {
+  it("lit la taille décompressée d'un vrai classeur sans le décompresser", async () => {
+    const workbook = new ExcelJS.Workbook();
+    workbook.addWorksheet("A").addRow(["x".repeat(1000)]);
+    const bytes = new Uint8Array(await workbook.xlsx.writeBuffer());
+    const size = zipUncompressedSize(bytes);
+    expect(size).not.toBeNull();
+    expect(size!).toBeGreaterThan(1000);
+  });
+
+  it("refuse un fichier qui n'est pas une archive", async () => {
+    expect(zipUncompressedSize(new TextEncoder().encode("pas un classeur"))).toBeNull();
+    expect(await readSpreadsheet("faux.xlsx", new TextEncoder().encode("pas un classeur"))).toEqual({
+      ok: false,
+      message: "Fichier Excel illisible.",
     });
   });
 });
