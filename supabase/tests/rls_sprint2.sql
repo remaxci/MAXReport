@@ -38,13 +38,13 @@ declare
   n int;
 begin
   select count(*) into n from public.brand_modules where brand_id = x and enabled;
-  if n <> 12 then raise exception 'ECHEC valeurs par défaut : % modules au lieu de 12', n; end if;
+  if n <> 13 then raise exception 'ECHEC valeurs par défaut : % modules au lieu de 13', n; end if;
   select count(*) into n from public.option_lists where brand_id = x and is_system;
   if n <> 4 then raise exception 'ECHEC valeurs par défaut : % listes au lieu de 4', n; end if;
   select count(*) into n from public.statuses where brand_id = x and entity = 'offer';
   if n <> 7 then raise exception 'ECHEC valeurs par défaut : % statuts d''offre au lieu de 7', n; end if;
   select count(*) into n from public.statuses where brand_id = x and is_default;
-  if n <> 3 then raise exception 'ECHEC valeurs par défaut : % statuts par défaut au lieu de 3', n; end if;
+  if n <> 4 then raise exception 'ECHEC valeurs par défaut : % statuts par défaut au lieu de 4', n; end if;
   select count(*) into n from public.pipeline_stages where brand_id = x and category in ('won', 'lost') and is_system;
   if n <> 2 then raise exception 'ECHEC valeurs par défaut : étapes gagnée/perdue absentes'; end if;
 end $$;
@@ -62,7 +62,7 @@ declare
   n int;
 begin
   select count(*) into n from public.statuses where brand_id = x;
-  if n <> 18 then raise exception 'ECHEC commercial X : % statuts lisibles au lieu de 18', n; end if;
+  if n <> 23 then raise exception 'ECHEC commercial X : % statuts lisibles au lieu de 23', n; end if;
   select count(*) into n from public.statuses where brand_id = y;
   if n <> 0 then raise exception 'ECHEC commercial X : lit les statuts de Y'; end if;
   select count(*) into n from public.option_items where brand_id = y;

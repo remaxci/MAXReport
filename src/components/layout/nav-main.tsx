@@ -1,5 +1,6 @@
 "use client";
 
+import { ListTodo } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -33,9 +34,23 @@ export function NavMain({ data }: { data: SidebarData }) {
   const adminItems = adminNavigation.filter((item) =>
     data.globalPermissions.includes(item.permission),
   );
+  // « Mes tâches » couvre toutes les marques où la planification est lisible.
+  const plans = data.brands.some(
+    (b) =>
+      b.modules.includes("planning") &&
+      (data.globalPermissions.includes("planning.read") || b.permissions.includes("planning.read")),
+  );
 
   return (
     <>
+      {plans && (
+        <SidebarGroup>
+          <SidebarMenu>
+            <NavLink item={{ title: "Mes tâches", icon: ListTodo }} href="/mes-taches" pathname={pathname} />
+          </SidebarMenu>
+        </SidebarGroup>
+      )}
+
       {brand &&
         brandNavigation.map((group) => {
           const items = group.items.filter(allowed);

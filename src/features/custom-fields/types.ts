@@ -41,6 +41,8 @@ export const FIELD_ENTITIES = [
   "weekly_report",
   "campaign",
   "expense",
+  "project",
+  "task",
 ] as const;
 export type FieldEntity = (typeof FIELD_ENTITIES)[number];
 
@@ -54,6 +56,8 @@ export const FIELD_ENTITY_LABELS: Record<FieldEntity, string> = {
   weekly_report: "Activités hebdomadaires",
   campaign: "Campagnes",
   expense: "Dépenses",
+  project: "Projets",
+  task: "Tâches",
 };
 
 export type FieldOption = { value: string; label: string; isActive: boolean };
