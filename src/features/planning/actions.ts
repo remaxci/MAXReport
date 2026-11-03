@@ -6,9 +6,11 @@ import { z } from "zod";
 import { parseNumber } from "@/features/custom-fields/parse";
 import { readCustomValues } from "@/features/custom-fields/read";
 import { failed, forbidden, formValues, invalid, type ActionState } from "@/lib/form";
+import { dbErrorMessage } from "@/lib/supabase/errors";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext } from "@/server/authz/context";
 import { can } from "@/server/authz/permissions";
+import { compareCards, planMove } from "./board";
 import { PRIORITIES, PROJECT_STATUSES } from "./config";
 
 // Chaque action : identifiants vérifiés, droits revérifiés côté serveur,
@@ -320,6 +322,71 @@ export async function updateTaskProgress(
   if (data.length === 0) return forbidden();
   refresh();
   return { ok: true, message: "Avancement enregistré." };
+}
+
+/**
+ * Kanban : change le statut d'une tâche et la place juste avant `beforeId`
+ * (ou en fin de colonne). Sans droit de gestion, seul le responsable déplace
+ * sa tâche, et sans réordonner celles des autres : elle va alors en fin de colonne.
+ */
+export async function moveTask(
+  brandId: string,
+  taskId: string,
+  statusId: string,
+  beforeId: string | null,
+): Promise<{ ok: boolean; message: string }> {
+  const denied = { ok: false, message: "Action non autorisée." };
+  const scope = await planningScope(brandId);
+  if (
+    !scope ||
+    !uuid.safeParse(taskId).success ||
+    !uuid.safeParse(statusId).success ||
+    (beforeId !== null && !uuid.safeParse(beforeId).success)
+  ) {
+    return denied;
+  }
+  const supabase = await createClient();
+  const { data: task } = await supabase
+    .from("tasks")
+    .select("assignee_id, archived_at")
+    .eq("id", taskId)
+    .eq("brand_id", brandId)
+    .maybeSingle();
+  if (!task || task.archived_at) return denied;
+  if (!scope.canManage && task.assignee_id !== scope.ctx.userId) {
+    return { ok: false, message: "Vous ne pouvez déplacer que vos propres tâches." };
+  }
+
+  const { data: column, error: columnError } = await supabase
+    .from("tasks")
+    .select("id, position, due_on, title")
+    .eq("brand_id", brandId)
+    .eq("status_id", statusId)
+    .is("archived_at", null)
+    .neq("id", taskId)
+    .limit(1000);
+  if (columnError) return { ok: false, message: dbErrorMessage(columnError) };
+  const sorted = column.map((c) => ({ id: c.id, position: c.position, dueOn: c.due_on, title: c.title })).sort(compareCards);
+  let updates = planMove(sorted, taskId, beforeId);
+  if (!scope.canManage && updates.some((u) => u.id !== taskId)) updates = planMove(sorted, taskId, null);
+
+  const own = updates.find((u) => u.id === taskId)!;
+  const { error } = await supabase
+    .from("tasks")
+    .update({ status_id: statusId, position: own.position })
+    .eq("id", taskId)
+    .eq("brand_id", brandId);
+  if (error) return { ok: false, message: dbErrorMessage(error) };
+  for (const update of updates.filter((u) => u.id !== taskId)) {
+    const { error: reorderError } = await supabase
+      .from("tasks")
+      .update({ position: update.position })
+      .eq("id", update.id)
+      .eq("brand_id", brandId);
+    if (reorderError) return { ok: false, message: dbErrorMessage(reorderError) };
+  }
+  refresh();
+  return { ok: true, message: "Tâche déplacée." };
 }
 
 export async function setTaskArchived(

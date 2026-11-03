@@ -1,7 +1,8 @@
 # MAXreport · Planification et BI
 
-> **État** : plan validé le 3 novembre 2026 (Planification d'abord). Sprint 10 développé sur la
-> branche `sprint-10/planification` (base de test, Preview), en attente de validation.
+> **État** : plan validé le 3 novembre 2026 (Planification d'abord). Sprint 10 en production le
+> 3 novembre 2026 (migration `20261103120950_planification`). Sprint 11 développé sur la branche
+> `sprint-11/vues-planification` (sans migration), en attente de validation.
 >
 > Proposition du 3 novembre 2026. Deux modules
 > ajoutés à MAXreport, avec les mêmes comptes, marques, rôles et règles de sécurité
@@ -59,6 +60,13 @@ Rôles par défaut : administrateur de marque, responsable commercial et marketi
 - Écrans : Projets (avancement, tâches à faire et en retard), fiche projet (jalons, tâches), Tâches (filtres), fiche tâche (statut et avancement, sous-tâches, chronologie et commentaires), Mes tâches (toutes marques, par échéance). Statuts et champs personnalisés des tâches et projets dans les paramètres de la marque.
 - Règles testées (`src/features/planning/rules.ts`) : retard, regroupement par échéance, avancement d'un projet (pondéré par les heures estimées s'il y en a), tri.
 - Un lien (campagne, offre ou mémo, prospect) ne peut viser qu'un élément que l'utilisateur voit.
+
+### Sprint 11 : vues
+
+- Onglets des tâches : Liste, Kanban, Calendrier ; menu « Feuille de route ». Aucune migration.
+- **Kanban** : une colonne par statut (les statuts désactivés n'apparaissent que s'ils portent encore des tâches). Glisser une carte change son statut et son ordre ; au clavier, la liste « Déplacer vers » de chaque carte. L'ordre utilise des positions espacées (`src/features/planning/board.ts`) : en général seule la carte déplacée est réécrite. Sans `planning.manage`, on ne déplace que ses propres tâches, en fin de colonne (jamais les cartes des autres). Affichage immédiat, annulé si la base refuse.
+- **Calendrier** : mois du lundi au dimanche ; échéances des tâches (en retard en rouge, terminées barrées) et jalons (◆) ; filtres responsable et projet ; liste des jours sur mobile.
+- **Feuille de route** : une année par trimestres et mois ; projet = barre (ses dates, à défaut celles de ses jalons) avec son avancement ; jalons ◆ (atteint) ou ◇ ; repère du jour. « Toutes les marques » pour qui lit la planification de plusieurs marques. Projets abandonnés masqués ; projets sans date listés à part.
 
 ## 2. BI : graphiques et tableaux de bord
 
