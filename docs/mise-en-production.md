@@ -97,4 +97,8 @@ Dans cet ordre : chaque étape s'appuie sur la précédente.
   - `NOTIFICATIONS_ENABLED` = `true` en dernier : c'est l'interrupteur ;
   - facultatif : `APP_URL` (adresse des liens dans les e-mails ; par défaut le domaine de production Vercel).
   La tâche planifiée (`vercel.json`) appelle `/api/cron/notifications` du lundi au vendredi vers 6 h (UTC, donc heure d'Abidjan) ; sans `CRON_SECRET` correct, la route refuse. Chacun règle ou coupe son récapitulatif dans « Mon compte », où figure aussi le dernier envoi.
+- **Assistant IA** (lecture seule) : prêt, mais hors service tant que la clé d'API n'est pas posée. Pour l'activer, ajouter dans Vercel › Settings › Environment Variables (Production, et Preview pour l'essayer d'abord), puis redéployer :
+  - `ANTHROPIC_API_KEY` : clé d'API créée dans la console Anthropic (console.anthropic.com › API Keys), de préférence dans un espace de travail dédié à MAXreport avec une limite de dépense mensuelle. Elle ne sert que côté serveur ; ne jamais la préfixer par `NEXT_PUBLIC_` ;
+  - facultatif : `ASSISTANT_DAILY_LIMIT`, nombre de questions par personne et par jour (de 1 à 1000 ; 50 par défaut).
+  Les questions et les données consultées sont transmises à Anthropic pour y répondre ; MAXreport ne garde que le volume de chaque question (table `assistant_usage`), pour le quota et le suivi des coûts. Pour couper l'assistant, retirer la clé et redéployer.
 - **Évolutions** : branche dédiée, migration testée sur la base de test, tests de `supabase/tests/` relancés, Preview validée, puis fusion dans `main` après validation.

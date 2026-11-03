@@ -17,6 +17,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      assistant_usage: {
+        Row: {
+          brand_id: string
+          created_at: string
+          id: string
+          input_tokens: number
+          model: string
+          output_tokens: number
+          status: string
+          tool_calls: number
+          user_id: string
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          id?: string
+          input_tokens?: number
+          model: string
+          output_tokens?: number
+          status: string
+          tool_calls?: number
+          user_id?: string
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          id?: string
+          input_tokens?: number
+          model?: string
+          output_tokens?: number
+          status?: string
+          tool_calls?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assistant_usage_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string

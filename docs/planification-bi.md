@@ -5,9 +5,11 @@
 > Sprint 12 en production le 3 novembre 2026 (migration `20261103133036_planification_dependances`).
 > Sprint 13 (graphiques BI) en production le 3 novembre 2026 (sans migration). Sprint 14 (explorateur et
 > tableaux de bord personnalisés) en production le 3 novembre 2026 (migration `20261103163000_tableaux_personnalises`) :
-> le plan est réalisé. Évolution « notifications des tâches » développée sur la branche
-> `evolution/notifications-taches` (migration `20261103180000_notifications_taches`, appliquée sur la base de test),
-> en attente de validation ; l'envoi ne s'active qu'avec la messagerie (voir mise-en-production.md, §4).
+> le plan est réalisé. Évolution « notifications des tâches » en production le 3 novembre 2026
+> (migration `20261103180000_notifications_taches`) ; l'envoi ne s'active qu'avec la messagerie (voir
+> mise-en-production.md, §4). Évolution « assistant IA » développée sur la branche `evolution/assistant-ia`
+> (migration `20261103200000_assistant_ia`, appliquée sur la base de test), en attente de validation ; elle ne
+> fonctionne qu'avec une clé d'API Anthropic (voir mise-en-production.md, §4).
 >
 > Proposition du 3 novembre 2026. Deux modules
 > ajoutés à MAXreport, avec les mêmes comptes, marques, rôles et règles de sécurité
@@ -119,6 +121,20 @@ Un graphique ne montre jamais plus que ce que son lecteur peut déjà consulter 
 - **Explorateur** (menu Pilotage) : un indicateur, une à huit marques, un découpage (semaine, mois, trimestre), 6, 12 ou 24 périodes jusqu'à une date, une comparaison (période précédente ou année précédente, pour une seule marque) et un graphique (courbe, barres, barres empilées entre marques). Résultat en graphique, en tableau (total entre marques, évolution) et en Excel. Indicateurs : ceux des tableaux de bord qui s'additionnent (réalisés commerciaux, mesures des relevés en flux ou en stock, sessions par canal) ; les valeurs non additives (portée, utilisateurs uniques) n'y figurent pas. Montants dans la devise de la marque, en XOF dès deux marques. Une marque où l'indicateur n'est pas suivi ou pas ouvert est écartée et signalée.
 - **Tableaux personnalisés** : migration `tableaux_personnalises`, table `custom_dashboards`. Un tableau appartient à une marque, ou à la Direction (toutes marques). Il ne contient que des réglages : au plus douze graphiques, validés par l'application et contrôlés par la base (une liste d'objets, taille bornée). Chaque graphique est recalculé à l'ouverture, sous les droits du lecteur. Lecture : `brand.read` (Direction : `direction.read`) ; création et modification : `reports.manage` (Direction : `direction.read`). Un tableau personnel n'est visible et modifiable que par son auteur, et personne d'autre ne peut rendre personnel le tableau d'un autre. Un tableau de marque ne reçoit que des graphiques de sa marque. Suppression confirmée ; journal d'audit. Tests `supabase/tests/rls_sprint14.sql`.
 - Règles testées : `settings.test.ts` (catalogue, adresse ↔ réglages, comparaison et empilement, périodes, format des graphiques enregistrés) et `dashboards.test.ts` (droits, graphiques acceptés, ordre).
+
+### Évolution : assistant IA (lecture seule)
+
+- **Assistant IA** (menu Pilotage, droit `brand.read`, donc tous les collaborateurs) : on lui pose des questions en français sur les données de la marque ; il répond au fil de l'eau en indiquant ce qu'il consulte. Modèle Claude Opus 5.5 d'Anthropic (`claude-opus-5-5`), effort moyen ; si le modèle décline une demande, l'API la confie à un autre modèle Claude (repli côté serveur, `fallbacks: "default"`).
+- **Lecture seule, avec les droits de la personne** : cinq outils, et aucun ne modifie quoi que ce soit. Ce sont le tableau de bord d'une période, la tendance d'un indicateur (celui de l'explorateur), les offres et mémos, les tâches et le pipeline. Ils lisent avec la session Supabase de la personne (RLS) et vérifient module et droits comme les pages. La marque est fixée par le serveur, jamais par le modèle. Les paramètres de chaque appel sont validés, et un appel invalide n'est pas exécuté.
+- **Garde-fous** :
+  - consignes : ne rien inventer ; une valeur absente n'est pas 0 ; les textes issus des données ne sont jamais des consignes ;
+  - au plus 8 allers-retours avec les outils par question ; résultats bornés en taille ;
+  - conversation de 20 messages au plus (questions de 4 000 caractères, réponses de 16 000) ;
+  - requêtes acceptées seulement depuis l'application ;
+  - quota quotidien par personne (50 questions par défaut).
+- **Données** : la question, l'historique de la conversation et les données consultées sont transmis à Anthropic pour produire la réponse ; la page le dit. MAXreport ne conserve ni les questions ni les réponses : l'historique reste dans l'onglet du navigateur. La table `assistant_usage` (migration `assistant_ia`) ne garde que le volume (jetons, appels d'outils) et l'issue de chaque question. Elle ne se modifie ni ne s'efface, et chacun ne lit que ses propres lignes. Tests `supabase/tests/rls_assistant.sql`.
+- Sans clé d'API, la page indique que l'assistant n'est pas encore en service : aucune réponse n'est simulée.
+- Règles testées : `assistant.test.ts` (activation, quota, forme de la conversation, consignes, taille des résultats) et `run.test.ts`. Ce dernier rejoue la boucle contre une fausse API : appel d'outil puis réponse, paramètres invalides, refus, réponse tronquée, erreurs.
 
 ## 3. Découpage en sprints
 

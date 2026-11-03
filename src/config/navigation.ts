@@ -19,6 +19,7 @@ import {
   Share2,
   ShieldCheck,
   Signature,
+  Sparkles,
   Target,
   Telescope,
   Upload,
@@ -54,6 +55,7 @@ export const brandNavigation: NavGroup[] = [
       { title: "Vue Direction", icon: ChartNoAxesCombined, path: "/direction", permission: "direction.read" },
       { title: "Explorateur", icon: Telescope, path: "/explorateur", permission: "brand.read" },
       { title: "Tableaux personnalisés", icon: LayoutGrid, path: "/tableaux", permission: "brand.read" },
+      { title: "Assistant IA", icon: Sparkles, path: "/assistant", permission: "brand.read" },
     ],
   },
   {
