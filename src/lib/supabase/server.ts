@@ -1,10 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import type { Database } from "./database.types";
 
 // Client Supabase côté serveur (Server Components, Server Actions, Route Handlers).
 // Créer un nouveau client à chaque requête : ne jamais le partager.
 export async function createClient() {
+  // La session Supabase lit l'heure (Date.now) pour vérifier son expiration.
+  // Les cookies seuls autorisent encore un prérendu ; connection() réserve
+  // la suite à la requête réelle (sinon Next signale « Date.now() while prerendering »).
+  await connection();
   const cookieStore = await cookies();
 
   return createServerClient<Database>(
