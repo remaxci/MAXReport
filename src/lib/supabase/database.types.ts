@@ -268,6 +268,7 @@ export type Database = {
           custom: Json
           email: string | null
           id: string
+          import_batch_id: string | null
           name: string
           next_follow_up_on: string | null
           owner_id: string | null
@@ -289,6 +290,7 @@ export type Database = {
           custom?: Json
           email?: string | null
           id?: string
+          import_batch_id?: string | null
           name: string
           next_follow_up_on?: string | null
           owner_id?: string | null
@@ -310,6 +312,7 @@ export type Database = {
           custom?: Json
           email?: string | null
           id?: string
+          import_batch_id?: string | null
           name?: string
           next_follow_up_on?: string | null
           owner_id?: string | null
@@ -1450,6 +1453,7 @@ export type Database = {
           followers_new: number | null
           followers_total: number | null
           id: string
+          import_batch_id: string | null
           impressions: number | null
           interactions: number | null
           period_end: string
@@ -1470,6 +1474,7 @@ export type Database = {
           followers_new?: number | null
           followers_total?: number | null
           id?: string
+          import_batch_id?: string | null
           impressions?: number | null
           interactions?: number | null
           period_end: string
@@ -1490,6 +1495,7 @@ export type Database = {
           followers_new?: number | null
           followers_total?: number | null
           id?: string
+          import_batch_id?: string | null
           impressions?: number | null
           interactions?: number | null
           period_end?: string
@@ -1599,6 +1605,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          import_batch_id: string | null
           impressions: number | null
           leads: number | null
           period_end: string
@@ -1619,6 +1626,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          import_batch_id?: string | null
           impressions?: number | null
           leads?: number | null
           period_end: string
@@ -1639,6 +1647,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          import_batch_id?: string | null
           impressions?: number | null
           leads?: number | null
           period_end?: string
@@ -1712,6 +1721,7 @@ export type Database = {
           created_by: string | null
           form_submissions: number | null
           id: string
+          import_batch_id: string | null
           page_views: number | null
           period_end: string
           period_start: string
@@ -1737,6 +1747,7 @@ export type Database = {
           created_by?: string | null
           form_submissions?: number | null
           id?: string
+          import_batch_id?: string | null
           page_views?: number | null
           period_end: string
           period_start: string
@@ -1762,6 +1773,7 @@ export type Database = {
           created_by?: string | null
           form_submissions?: number | null
           id?: string
+          import_batch_id?: string | null
           page_views?: number | null
           period_end?: string
           period_start?: string
@@ -1789,6 +1801,156 @@ export type Database = {
           },
         ]
       }
+      import_batches: {
+        Row: {
+          brand_id: string
+          committed_at: string | null
+          committed_by: string | null
+          created_at: string
+          created_by: string | null
+          error_count: number | null
+          file_name: string
+          file_sha256: string
+          file_size: number
+          headers: Json
+          id: string
+          inserted_count: number | null
+          mapping: Json
+          options: Json
+          report: Json | null
+          rolled_back_at: string | null
+          rolled_back_by: string | null
+          row_count: number
+          rows: Json
+          skipped_count: number | null
+          status: string
+          target: string
+        }
+        Insert: {
+          brand_id: string
+          committed_at?: string | null
+          committed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_count?: number | null
+          file_name: string
+          file_sha256: string
+          file_size: number
+          headers: Json
+          id?: string
+          inserted_count?: number | null
+          mapping?: Json
+          options?: Json
+          report?: Json | null
+          rolled_back_at?: string | null
+          rolled_back_by?: string | null
+          row_count: number
+          rows: Json
+          skipped_count?: number | null
+          status?: string
+          target: string
+        }
+        Update: {
+          brand_id?: string
+          committed_at?: string | null
+          committed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_count?: number | null
+          file_name?: string
+          file_sha256?: string
+          file_size?: number
+          headers?: Json
+          id?: string
+          inserted_count?: number | null
+          mapping?: Json
+          options?: Json
+          report?: Json | null
+          rolled_back_at?: string | null
+          rolled_back_by?: string | null
+          row_count?: number
+          rows?: Json
+          skipped_count?: number | null
+          status?: string
+          target?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_batches_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      historical_metrics: {
+        Row: {
+          brand_id: string
+          comments: string | null
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          id: string
+          import_batch_id: string
+          metric_key: string
+          period_end: string
+          period_start: string
+          user_id: string | null
+          value: number
+        }
+        Insert: {
+          brand_id: string
+          comments?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          id?: string
+          import_batch_id: string
+          metric_key: string
+          period_end: string
+          period_start: string
+          user_id?: string | null
+          value: number
+        }
+        Update: {
+          brand_id?: string
+          comments?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          id?: string
+          import_batch_id?: string
+          metric_key?: string
+          period_end?: string
+          period_start?: string
+          user_id?: string | null
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historical_metrics_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historical_metrics_brand_id_import_batch_id_fkey"
+            columns: ["brand_id", "import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "historical_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1813,6 +1975,16 @@ export type Database = {
           user_id: string
         }[]
       }
+      commit_import: {
+        Args: {
+          p_batch_id: string
+          p_errors: number
+          p_report: Json
+          p_rows: Json
+          p_skipped: number
+        }
+        Returns: number
+      }
       metric_actuals: {
         Args: { p_brand_id: string; p_from: string; p_to: string }
         Returns: {
@@ -1825,6 +1997,10 @@ export type Database = {
       reorder_config: {
         Args: { p_brand_id: string; p_ids: string[]; p_table: string }
         Returns: undefined
+      }
+      rollback_import: {
+        Args: { p_batch_id: string }
+        Returns: number
       }
     }
     Enums: {

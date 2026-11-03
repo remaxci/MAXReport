@@ -293,10 +293,10 @@ Une **contrainte d'exclusion** (`btree_gist`) interdit deux relevés dont les p�
 
 | Table | Rôle |
 |---|---|
-| `import_batches` | brand_id, entity, fichier (Storage), mapping jsonb, status (`uploaded`, `mapped`, `validated`, `committed`, `rolled_back`, `failed`), compteurs, auteur, dates |
-| `import_rows` | batch_id, row_number, raw jsonb, normalized jsonb, errors jsonb, duplicate_of, action (`insert`, `update`, `skip`) |
-| `import_mappings` | modèles de correspondance de colonnes réutilisables |
-| `historical_metrics` | brand_id, user_id, metric_key, period_start, period_end, value, currency, import_batch_id. Chiffres agrégés d'avant MAXreport, séparés des enregistrements CRM |
+| `import_batches` | brand_id, target (`social_snapshots`, `campaign_snapshots`, `website_snapshots`, `companies`, `historical_metrics`), file_name, file_size, file_sha256, headers et rows (lignes brutes du fichier, 5 000 au plus), mapping, options (formats de dates et de nombres, période déduite, objet par défaut, devise), status (`uploaded`, `committed`, `rolled_back`), compteurs, report (lignes écartées et motifs), auteurs et dates |
+| `historical_metrics` | brand_id, user_id (null = équipe), metric_key, period_start, period_end, value, currency, comments, import_batch_id. Chiffres agrégés d'avant MAXreport, séparés des enregistrements saisis ; pas de recouvrement de périodes pour un même indicateur, collaborateur et devise |
+
+Les lignes importées (relevés, prospects, historique) portent `import_batch_id`. Le fichier lui-même n'est pas stocké : ses lignes brutes et son empreinte suffisent à la traçabilité. Les modèles de correspondance ne sont pas une table à part : un nouveau fichier aux mêmes en-têtes reprend la correspondance du dernier lot importé.
 
 ---
 
@@ -428,7 +428,7 @@ Les fonctions d'agrégation sont les mêmes que pour une marque, appliquées à 
 
 Un sprint est un lot livrable et vérifiable, développé sur sa propre branche avec une URL Preview Vercel.
 
-**Avancement :** Sprints 0 à 5 livrés sur leurs branches (base de dev, Preview Vercel). Rien n'est encore en production. Le Sprint 4 a été découpé : 4a (prospects, contacts, échanges, opportunités, contrats) puis 4b (fiches d'activité hebdomadaire, vues du responsable, objectifs).
+**Avancement :** Sprints 0 à 6 livrés sur leurs branches (base de dev, Preview Vercel). Rien n'est encore en production. Le Sprint 4 a été découpé : 4a (prospects, contacts, échanges, opportunités, contrats) puis 4b (fiches d'activité hebdomadaire, vues du responsable, objectifs).
 
 **Décision Sprint 4a :** l'annuaire des prospects est partagé au sein d'une marque (permission `crm.read`) pour éviter les doublons d'entreprises ; les opportunités, offres, mémos et contrats restent personnels pour les commerciaux (`*.manage_own`).
 
@@ -448,6 +448,14 @@ Un sprint est un lot livrable et vérifiable, développé sur sa propre branche 
 - Évolutions comparées à la période précédente et à la même période de l'année précédente (semaine : 52 semaines plus tôt).
 - Total des dépenses de campagnes converti dans la devise de la marque (parité XOF/EUR) ; les montants en USD sont exclus et signalés tant que les taux ne sont pas saisis.
 - Comptes, campagnes et sites s'archivent ; seul un relevé erroné se supprime, avec trace dans le journal d'audit.
+
+**Règles Sprint 6 :**
+- Permission `imports.manage` (Super-administrateur, Administrateur de marque, Marketing, Responsable commercial), plus le droit sur la table cible : `marketing.manage` pour les relevés, `crm.manage` pour les prospects.
+- Étapes : envoi (CSV ou Excel, 4 Mo et 5 000 lignes au plus) → correspondance des colonnes (proposée, ou reprise du dernier fichier aux mêmes en-têtes) → aperçu → import confirmé. Rien n'est enregistré avant la confirmation ; la vérification est refaite au moment d'importer.
+- Doublons écartés, jamais importés : relevé ou chiffre historique qui recouvre une période déjà présente (en base ou plus haut dans le fichier), prospect au nom déjà connu.
+- L'import (`commit_import`) et l'annulation (`rollback_import`) se font d'un bloc, sous la RLS de l'utilisateur. Seules ces fonctions rattachent des lignes à un lot ou changent son état (marqueur de transaction vérifié par les triggers). Un prospect importé déjà utilisé (opportunité, offre…) bloque l'annulation du lot.
+- Un lot non importé peut être abandonné (supprimé) ; un lot importé ou annulé reste dans l'historique.
+- Montants arrondis au centime ; nombres et dates lus au format français par défaut (format anglais au choix) ; une cellule vide reste vide.
 
 | Sprint | Contenu | Taille |
 |---|---|---|

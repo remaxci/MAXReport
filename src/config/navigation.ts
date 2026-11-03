@@ -103,7 +103,7 @@ export const brandNavigation: NavGroup[] = [
       { title: "Objectifs", icon: Target, module: "objectives", path: "/objectifs", permission: "brand.read" },
       { title: "Budgets", icon: Wallet, module: "budgets" },
       { title: "Rapports", icon: ChartColumn, module: "reports" },
-      { title: "Imports", icon: Upload, module: "imports" },
+      { title: "Imports", icon: Upload, module: "imports", path: "/imports", permission: "imports.manage" },
     ],
   },
   {
