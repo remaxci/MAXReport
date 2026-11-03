@@ -1,8 +1,8 @@
 # MAXreport · Recette et mise en production
 
-> Sprint 9 · 3 novembre 2026. La production (`max-report.vercel.app`, base Supabase `MAXreport`)
-> n'a pas encore reçu l'application : elle sert toujours le tout premier socle, et sa base est vide.
-> **Rien de ce qui suit n'est fait sans la validation explicite de la Direction.**
+> Sprint 9 · 3 novembre 2026. **Mise en production faite le 3 novembre 2026**, après validation
+> de la Direction : `max-report.vercel.app` sert la version `a9a395d` (branche `main`), reliée à la
+> base Supabase `MAXreport`. Détail de la bascule et suites au §3.
 
 ## 1. Résultat de la recette
 
@@ -35,6 +35,12 @@
    - activer la **protection des mots de passe compromis** (seule alerte de sécurité restante) et une longueur minimale de 10 caractères ;
    - **URL Configuration** : *Site URL* = l'adresse définitive (`https://max-report.vercel.app` ou votre domaine) ;
    - **SMTP** de votre messagerie (adresse d'envoi REMAX CI) pour les invitations et les réinitialisations de mot de passe.
+   - **État au 3 novembre 2026** (projet de production) :
+     - *Site URL* = `https://max-report.vercel.app` (fait) ;
+     - inscriptions libres désactivées (fait ; l'API d'authentification renvoie `disable_signup: true`) ;
+     - longueur minimale des mots de passe : 10 (fait) ;
+     - mots de passe compromis : réservé à l'offre Pro, à activer après le passage en Pro ;
+     - SMTP : reporté. L'application n'a pas encore de page pour recevoir les liens d'invitation et de réinitialisation ; d'ici là, les comptes se créent dans Supabase (*Add user*, mot de passe et confirmation automatique).
 3. **Domaine** (facultatif) : un sous-domaine du type `maxreport.remax.ci` à relier au projet Vercel.
 4. Préparer la **liste des marques** (code court, nom, devise) et des **collaborateurs** (e-mail, marque, rôle).
 
@@ -46,6 +52,18 @@
 4. **Application** : fusionner la branche `sprint-9/recette` (qui contient les sprints 0 à 9) dans `main` ; Vercel déploie la production, qui utilise déjà les variables de la base de production.
 5. **Contrôles après déploiement** : connexion, création d'une marque (valeurs par défaut posées), activation des modules, ajout d'un collaborateur, tableau de bord, export Excel, impression PDF, en-têtes de sécurité.
 6. **Mise en service** : marques, collaborateurs et rôles ; taux de change USD du mois ; imports de l'existant (prospects, historique agrégé avec sa date de bascule) ; premières saisies.
+
+### Bascule du 3 novembre 2026
+
+| Étape | Résultat |
+|---|---|
+| 1. Migrations | Les 18 appliquées sans erreur, dans l'ordre, sous les mêmes noms et numéros que les fichiers du dépôt |
+| 2. Vérifications | Empreinte du schéma identique à la base de test (colonnes, contraintes, politiques, index, déclencheurs, droits, permissions et rôles, compartiment) ; seules différences : des lignes de commentaire dans trois fonctions. 38 tables, toutes avec RLS et politiques ; aucun droit anonyme ; compartiment des pièces jointes privé. Performance : aucune alerte (index encore inutilisés : base vide) |
+| 3. Super-administrateur | Compte `communication@remax.ci` créé par la Direction (Supabase › Authentication), profil créé automatiquement ; `app.grant_super_admin` lancé : rôle global, 37 permissions sur 37 |
+| 4. Application | `main` avancée de `fc04b60` à `a9a395d` (sans fusion, 12 commits) ; déploiement Vercel de production prêt ; variables : adresse et clé publique de la base de production, aucune clé secrète |
+| 5. Contrôles | Connexion : 200, page en français, aucune erreur ; toutes les pages renvoient vers la connexion sans session ; en-têtes de sécurité présents, `X-Powered-By` absent, HSTS actif. Contrôles connectés faits par la Direction : marque `REMAXCI` créée, un collaborateur (compte créé par *Add user*) affecté comme commercial |
+
+**Alerte de sécurité propre à la production** : `public.rls_auto_enable()`, fonction ajoutée par Supabase à la création du projet (déclencheur `ensure_rls`, qui active la RLS sur toute nouvelle table). Le conseiller la signale comme appelable par l'API ; elle ne renvoie aucune donnée (une API ne peut pas afficher son type de retour) et ne peut que durcir la sécurité. Conservée telle quelle.
 
 ### Retour arrière
 
