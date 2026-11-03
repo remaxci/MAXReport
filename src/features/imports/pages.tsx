@@ -1,8 +1,10 @@
+import { Download } from "lucide-react";
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Forbidden, Notice, Page, PageHeader, PageSkeleton } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MetricTile } from "@/features/activities/view";
@@ -82,11 +84,28 @@ async function Imports({ slug }: { slug: string }) {
               les droits correspondants.
             </p>
           ) : (
-            <UploadForm
-              action={uploadImport.bind(null, brand.id)}
-              targets={targets.map((t) => ({ key: t, label: TARGETS[t].label, description: TARGETS[t].description }))}
-              accept={IMPORT_ACCEPT}
-            />
+            <>
+              <UploadForm
+                action={uploadImport.bind(null, brand.id)}
+                targets={targets.map((t) => ({ key: t, label: TARGETS[t].label, description: TARGETS[t].description }))}
+                accept={IMPORT_ACCEPT}
+              />
+              <div className="mt-6 border-t pt-4">
+                <p className="text-sm font-medium">Modèles à remplir</p>
+                <p className="text-xs text-muted-foreground">
+                  Fichiers Excel dont les colonnes sont reconnues automatiquement, avec les listes de {brand.name} et une aide
+                  par colonne.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {targets.map((t) => (
+                    <Button key={t} variant="outline" size="sm" nativeButton={false} render={<a href={`${base}/modele/${t}`} download />}>
+                      <Download />
+                      {TARGETS[t].label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
