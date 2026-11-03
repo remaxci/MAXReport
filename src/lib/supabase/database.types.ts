@@ -908,6 +908,57 @@ export type Database = {
           },
         ]
       }
+      notification_digests: {
+        Row: {
+          created_at: string
+          digest_on: string
+          error: string | null
+          id: string
+          status: string
+          task_count: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          digest_on: string
+          error?: string | null
+          id?: string
+          status: string
+          task_count?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          digest_on?: string
+          error?: string | null
+          id?: string
+          status?: string
+          task_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          daily_digest: boolean
+          due_soon_days: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          daily_digest?: boolean
+          due_soon_days?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          daily_digest?: boolean
+          due_soon_days?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       opportunities: {
         Row: {
           amount: number | null
@@ -2726,6 +2777,15 @@ export type Database = {
       rollback_import: {
         Args: { p_batch_id: string }
         Returns: number
+      }
+      task_digests: {
+        Args: { p_today: string }
+        Returns: {
+          email: string
+          full_name: string
+          items: Json
+          user_id: string
+        }[]
       }
     }
     Enums: {

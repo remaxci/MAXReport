@@ -4,8 +4,10 @@
 > 3 novembre 2026 (migration `20261103120950_planification`), Sprint 11 le même jour (sans migration).
 > Sprint 12 en production le 3 novembre 2026 (migration `20261103133036_planification_dependances`).
 > Sprint 13 (graphiques BI) en production le 3 novembre 2026 (sans migration). Sprint 14 (explorateur et
-> tableaux de bord personnalisés) développé sur la branche `sprint-14/explorateur` (migration
-> `20261103163000_tableaux_personnalises`, appliquée sur la base de test), en attente de validation.
+> tableaux de bord personnalisés) en production le 3 novembre 2026 (migration `20261103163000_tableaux_personnalises`) :
+> le plan est réalisé. Évolution « notifications des tâches » développée sur la branche
+> `evolution/notifications-taches` (migration `20261103180000_notifications_taches`, appliquée sur la base de test),
+> en attente de validation ; l'envoi ne s'active qu'avec la messagerie (voir mise-en-production.md, §4).
 >
 > Proposition du 3 novembre 2026. Deux modules
 > ajoutés à MAXreport, avec les mêmes comptes, marques, rôles et règles de sécurité
@@ -54,7 +56,7 @@ Rôles par défaut : administrateur de marque, responsable commercial et marketi
 - Une tâche, ses commentaires, ses dépendances et ses pièces jointes appartiennent à une seule marque ; la RLS l'impose comme pour toutes les autres tables.
 - Échéance avant le début, dépendance circulaire, responsable étranger à la marque : refusés par la base.
 - En retard : échéance passée et statut non terminé. Avancement d'un projet : part des tâches terminées (ou des heures estimées terminées, si renseignées).
-- Notifications par e-mail (échéance proche, tâche assignée) : prévues, actives une fois le SMTP en service.
+- Notifications par e-mail : un récapitulatif quotidien (jours ouvrés, vers 6 h) des tâches confiées depuis le dernier envoi, à rendre aujourd'hui ou bientôt (délai réglable dans « Mon compte », la veille par défaut) et en retard. Le contenu est préparé par la base (`task_digests`), avec les mêmes droits que l'application : profil actif, `planning.read` sur la marque, marque active avec la planification. Un envoi par personne et par jour au plus, tracé dans `notification_digests` ; préférences dans `notification_preferences` (chacun les siennes). Rien n'est envoyé tant que la messagerie et les réglages d'activation ne sont pas en place. Tests `supabase/tests/rls_notifications.sql` et `src/features/notifications/notifications.test.ts`.
 
 ### Sprint 10 : ce qui est en place
 
