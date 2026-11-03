@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { Currency, FxRate } from "@/lib/metrics/currency";
 import { createClient } from "@/lib/supabase/server";
 
@@ -24,7 +25,7 @@ export async function listFxRates(limit = 2000): Promise<FxRateRow[]> {
   }));
 }
 
-/** Taux utilisés pour convertir les montants (EUR/XOF : parité fixe, hors table). */
-export async function getFxRates(): Promise<FxRate[]> {
+/** Taux utilisés pour convertir les montants (EUR/XOF : parité fixe, hors table). Lus une fois par requête. */
+export const getFxRates = cache(async (): Promise<FxRate[]> => {
   return (await listFxRates()).map(({ date, from, to, rate }) => ({ date, from, to, rate }));
-}
+});

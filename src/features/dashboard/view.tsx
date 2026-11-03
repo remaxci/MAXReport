@@ -1,7 +1,11 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { Chart } from "./chart-data";
+import { ChartView } from "./components/chart-view";
 import { PrintButton } from "./components/print-button";
 import type { Kpi, Section } from "./data";
 import { formatKpi, kpiEvolution } from "./format";
@@ -20,7 +24,24 @@ function KpiTile({ kpi }: { kpi: Kpi }) {
   );
 }
 
-export function SectionsView({ sections }: { sections: Section[] }) {
+/** Graphiques côte à côte sur grand écran, l'un sous l'autre sur mobile. */
+export function ChartsGrid({ charts }: { charts: Chart[] }) {
+  if (charts.length === 0) return null;
+  return (
+    <div className={`grid gap-6 ${charts.length > 1 ? "lg:grid-cols-2" : ""}`}>
+      {charts.map((chart) => (
+        <ChartView key={chart.key} chart={chart} />
+      ))}
+    </div>
+  );
+}
+
+export function ChartsSkeleton() {
+  return <Skeleton className="h-60 w-full rounded-lg" />;
+}
+
+/** Sections du tableau de bord ; `charts` : graphiques à placer sous les indicateurs de chaque section. */
+export function SectionsView({ sections, charts }: { sections: Section[]; charts?: Partial<Record<string, ReactNode>> }) {
   return (
     <div className="flex flex-col gap-6">
       {sections.map((section) => (
@@ -36,6 +57,7 @@ export function SectionsView({ sections }: { sections: Section[] }) {
                 ))}
               </div>
             )}
+            {charts?.[section.key]}
             {section.notes.length > 0 && (
               <ul className="flex list-disc flex-col gap-0.5 pl-5 text-xs text-muted-foreground">
                 {section.notes.map((note) => (

@@ -134,22 +134,35 @@ const excludedNote = (currencies: Iterable<string>) => {
 // Commercial : réalisés de l'équipe, historique avant la date de bascule
 // ---------------------------------------------------------------------
 
-async function commercial(c: Ctx): Promise<Section> {
-  const { brand, access, currency, rates } = c;
-  const cutover = await getHistoryCutover(brand.id);
-  const history: HistoricalRow[] = cutover ? await listHistoricalRows(brand.id) : [];
-  const excluded: string[] = [];
-
-  const reader = async (p: Period) => {
+/**
+ * Réalisés de l'équipe sur une période : l'historique importé avant la date
+ * de bascule, les données saisies ensuite (jamais les deux sur un même jour).
+ * Les devises exclues faute de taux s'ajoutent à `excluded`.
+ */
+export function commercialReader(
+  input: { brand: BrandSummary; cutover: string | null; history: readonly HistoricalRow[]; currency: Currency; rates: readonly FxRate[] },
+  excluded: string[],
+) {
+  const { brand, cutover, history, currency, rates } = input;
+  return async (p: Period) => {
     const split = splitAtCutover(p, cutover);
     const rows = split.detailed ? await getActuals(brand.id, split.detailed.start, split.detailed.end) : [];
-    return (metric: MetricKey) => {
+    return (metric: MetricKey): number | null => {
       const detail = split.detailed ? knownActual(rows, metric, null, brand.enabledModules, { currency, rates, date: p.end }) : null;
       const hist = split.historical ? historicalTeamTotal(history, metric, split.historical, { currency, rates }) : null;
       excluded.push(...(detail?.excludedCurrencies ?? []), ...(hist?.excludedCurrencies ?? []));
       return combineParts(hist?.value ?? null, detail?.value ?? null);
     };
   };
+}
+
+async function commercial(c: Ctx): Promise<Section> {
+  const { brand, access, currency, rates } = c;
+  const cutover = await getHistoryCutover(brand.id);
+  const history: HistoricalRow[] = cutover ? await listHistoricalRows(brand.id) : [];
+  const excluded: string[] = [];
+
+  const reader = commercialReader({ brand, cutover, history, currency, rates }, excluded);
   const [now, before] = await Promise.all([reader(c.period), reader(c.previous)]);
 
   const kpis: Kpi[] = availableMetrics(brand.enabledModules).map((metric) => ({
@@ -240,7 +253,8 @@ async function objectives(c: Ctx): Promise<Section> {
 // Marketing : totaux de la marque (comptes et sites)
 // ---------------------------------------------------------------------
 
-function totals(snapshots: Awaited<ReturnType<typeof listSnapshots>>, kind: MarketingKind, p: Period) {
+/** Totaux de la marque sur une période : chaque compte agrégé selon ses règles, puis additionné. */
+export function snapshotTotals(snapshots: Awaited<ReturnType<typeof listSnapshots>>, kind: MarketingKind, p: Period) {
   const fields = aggregationFields(kind);
   const byParent = new Map<string, typeof snapshots>();
   snapshots.forEach((s) => byParent.set(s.parentId, [...(byParent.get(s.parentId) ?? []), s]));
@@ -254,8 +268,8 @@ function totals(snapshots: Awaited<ReturnType<typeof listSnapshots>>, kind: Mark
 
 async function marketing(c: Ctx, kind: "social" | "website"): Promise<Section> {
   const snapshots = await listSnapshots(kind, c.brand.id, { from: c.previous.start, to: c.period.end });
-  const now = totals(snapshots, kind, c.period);
-  const before = totals(snapshots, kind, c.previous);
+  const now = snapshotTotals(snapshots, kind, c.period);
+  const before = snapshotTotals(snapshots, kind, c.previous);
   const count = (key: string, label: string): Kpi => ({ key, label, value: now.sum(key), previous: before.sum(key), format: "count" });
   const kpis: Kpi[] =
     kind === "social"
@@ -297,8 +311,8 @@ async function campaigns(c: Ctx): Promise<Section> {
     listCampaigns(c.brand.id, true),
   ]);
   const currencies = new Map([...active, ...archived].map((x) => [x.id, x.currency]));
-  const now = totals(snapshots, "campaign", c.period);
-  const before = totals(snapshots, "campaign", c.previous);
+  const now = snapshotTotals(snapshots, "campaign", c.period);
+  const before = snapshotTotals(snapshots, "campaign", c.previous);
   const spendOf = (t: typeof now, p: Period) =>
     sumInCurrency(
       t.aggregated.map((a) => ({ amount: a.values.spend, currency: currencies.get(a.parentId) ?? null })),

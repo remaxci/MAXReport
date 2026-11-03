@@ -1,10 +1,12 @@
+import { cache } from "react";
 import { readCutover, type HistoricalRow } from "@/lib/metrics/history";
 import { createClient } from "@/lib/supabase/server";
 
-// Lectures propres aux tableaux de bord, sous la RLS de l'utilisateur.
+// Lectures propres aux tableaux de bord, sous la RLS de l'utilisateur. Celles que
+// partagent indicateurs et graphiques sont lues une fois par requête (cache).
 
 /** Date de bascule de l'historique (paramètres du module Imports), ou null. */
-export async function getHistoryCutover(brandId: string): Promise<string | null> {
+export const getHistoryCutover = cache(async (brandId: string): Promise<string | null> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("brand_modules")
@@ -14,9 +16,9 @@ export async function getHistoryCutover(brandId: string): Promise<string | null>
     .maybeSingle();
   if (error) throw error;
   return readCutover(data?.settings);
-}
+});
 
-export async function listHistoricalRows(brandId: string): Promise<HistoricalRow[]> {
+export const listHistoricalRows = cache(async (brandId: string): Promise<HistoricalRow[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("historical_metrics")
@@ -32,7 +34,7 @@ export async function listHistoricalRows(brandId: string): Promise<HistoricalRow
     start: r.period_start,
     end: r.period_end,
   }));
-}
+});
 
 /**
  * Offres (ou mémos) envoyées dans la période, et combien ont abouti (statut de
@@ -77,4 +79,32 @@ export async function getOpenPipeline(brandId: string): Promise<{ amount: number
   return rows
     .filter((r) => r.pipeline_stages?.category === "open")
     .map((r) => ({ amount: r.amount === null ? null : Number(r.amount), currency: r.currency, probability: r.pipeline_stages!.probability }));
+}
+
+export type PipelineStage = { id: string; label: string; position: number; isActive: boolean };
+
+/** Étapes « en cours » du pipeline, dans leur ordre (entonnoir). */
+export async function getOpenStages(brandId: string): Promise<PipelineStage[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("pipeline_stages")
+    .select("id, label, position, is_active")
+    .eq("brand_id", brandId)
+    .eq("category", "open")
+    .order("position");
+  if (error) throw error;
+  return data.map((s) => ({ id: s.id, label: s.label, position: s.position, isActive: s.is_active }));
+}
+
+/** Opportunités non archivées visibles (RLS : toutes, ou les siennes), avec leur étape. */
+export async function getOpportunityStages(brandId: string): Promise<{ stageId: string; amount: number | null; currency: string | null }[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("opportunities")
+    .select("stage_id, amount, currency")
+    .eq("brand_id", brandId)
+    .is("archived_at", null)
+    .limit(20000);
+  if (error) throw error;
+  return data.map((o) => ({ stageId: o.stage_id, amount: o.amount === null ? null : Number(o.amount), currency: o.currency }));
 }
