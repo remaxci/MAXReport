@@ -260,9 +260,9 @@ async function PendingBatch({ batch, brandId }: { batch: Batch; brandId: string 
             headers={batch.headers}
             mapping={batch.mapping}
             options={options}
-            parents={config.marketing ? (context.parents ?? []).map((p) => ({ id: p.id, label: p.label })) : undefined}
+            parents={parentField ? (context.parents ?? []).map((p) => ({ id: p.id, label: p.label })) : undefined}
             parentLabel={parentField?.label}
-            showCurrency={batch.target === "historical_metrics"}
+            showCurrency={config.fields.some((f) => f.kind === "currency")}
             showPeriod={config.fields.some((f) => f.key === "period_end")}
           />
         </CardContent>

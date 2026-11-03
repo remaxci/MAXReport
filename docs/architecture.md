@@ -284,10 +284,12 @@ Une **contrainte d'exclusion** (`btree_gist`) interdit deux relevés dont les p�
 
 | Table | Colonnes principales |
 |---|---|
-| `budgets` | name, scope (`marketing`, `commercial`), period_start, period_end, amount, currency, status |
-| `budget_lines` | budget_id, channel (liste), campaign_id, label, amount, currency |
-| `expenses` | budget_line_id, campaign_id, supplier, description, expense_date, amount, currency, status (`committed`, `paid`), source, external_ref, import_batch_id |
-| `fx_rates` | rate_date, from_currency, to_currency, rate, source |
+| `budgets` | name, scope (`marketing`, `commercial`, `other`), period_start, period_end, amount (enveloppe), currency, status (`draft`, `approved`, `closed`), comments, archived_at |
+| `budget_lines` | budget_id, label, category (liste « Catégories de dépenses » de la marque), campaign_id (une ligne au plus par campagne et par budget), amount dans la devise du budget, position |
+| `expenses` | budget_line_id (obligatoire), campaign_id (repris de la ligne), supplier, description, expense_date, amount, currency d'origine, status (`committed`, `paid`), paid_on, external_ref (une même facture d'un même fournisseur n'existe qu'une fois), source, import_batch_id, archived_at |
+| `fx_rates` | rate_date, from_currency, to_currency, rate, source ; communs à toutes les marques, saisis par un rôle global (`fx_rates.manage`) ; la parité EUR/XOF n'y figure pas (fixe) |
+
+Une campagne n'a pas de colonne de ligne budgétaire : c'est la ligne qui désigne sa campagne.
 
 ### Imports
 
@@ -428,7 +430,7 @@ Les fonctions d'agrégation sont les mêmes que pour une marque, appliquées à 
 
 Un sprint est un lot livrable et vérifiable, développé sur sa propre branche avec une URL Preview Vercel.
 
-**Avancement :** Sprints 0 à 6 livrés sur leurs branches (base de dev, Preview Vercel). Rien n'est encore en production. Le Sprint 4 a été découpé : 4a (prospects, contacts, échanges, opportunités, contrats) puis 4b (fiches d'activité hebdomadaire, vues du responsable, objectifs).
+**Avancement :** Sprints 0 à 7 livrés sur leurs branches (base de dev, Preview Vercel). Rien n'est encore en production. Le Sprint 4 a été découpé : 4a (prospects, contacts, échanges, opportunités, contrats) puis 4b (fiches d'activité hebdomadaire, vues du responsable, objectifs).
 
 **Décision Sprint 4a :** l'annuaire des prospects est partagé au sein d'une marque (permission `crm.read`) pour éviter les doublons d'entreprises ; les opportunités, offres, mémos et contrats restent personnels pour les commerciaux (`*.manage_own`).
 
@@ -456,6 +458,15 @@ Un sprint est un lot livrable et vérifiable, développé sur sa propre branche 
 - L'import (`commit_import`) et l'annulation (`rollback_import`) se font d'un bloc, sous la RLS de l'utilisateur. Seules ces fonctions rattachent des lignes à un lot ou changent son état (marqueur de transaction vérifié par les triggers). Un prospect importé déjà utilisé (opportunité, offre…) bloque l'annulation du lot.
 - Un lot non importé peut être abandonné (supprimé) ; un lot importé ou annulé reste dans l'historique.
 - Montants arrondis au centime ; nombres et dates lus au format français par défaut (format anglais au choix) ; une cellule vide reste vide.
+
+**Règles Sprint 7 :**
+- Permissions `budgets.read` (Direction, Lecture, Responsable commercial) et `budgets.manage` (Administrateur de marque, Marketing) ; `fx_rates.manage` réservé au Super-administrateur (taux communs à toutes les marques).
+- Engagé = dépenses engagées + payées ; réalisé = dépenses payées ; consommation = engagé ÷ enveloppe (ou montant de la ligne) × 100. Alerte au seuil de la marque (80 % par défaut, réglable par un rôle global), dépassement au-delà de 100 %.
+- Anti-double comptage : une ligne liée à une campagne compte ses factures dès qu'il en existe une ; sinon la dépense relevée sur la plateforme (relevés compris dans la période du budget), affichée « non facturée ». Jamais les deux.
+- Doublons de dépenses : une facture d'un même fournisseur est unique (base) ; même ligne, même date, même montant demande une confirmation à la saisie et est écartée à l'import.
+- Conversion au dernier taux connu à la date de l'opération ; les montants sans taux sont exclus et signalés. Les taux saisis servent aussi au pipeline pondéré, aux contrats, aux objectifs, aux fiches d'activité et aux campagnes.
+- Un budget clôturé ne reçoit plus de dépenses ; budgets et dépenses s'archivent ; une ligne sans dépense se supprime.
+- Les dépenses s'importent (Sprint 6) et l'annulation du lot les supprime.
 
 | Sprint | Contenu | Taille |
 |---|---|---|

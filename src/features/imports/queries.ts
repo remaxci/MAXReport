@@ -163,8 +163,27 @@ export async function findSameFile(brandId: string, target: ImportTarget, sha256
 const keys = (...values: (string | null | undefined)[]) =>
   [...new Set(values.filter((v): v is string => !!v).map(normalizeKey).filter(Boolean))];
 
-/** Objets suivis d'un type marketing, avec les clés qui les désignent. */
+/** Lignes des budgets ouverts (non archivés, non clôturés), désignées par leur libellé. */
+async function getBudgetLineParents(brandId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("budget_lines")
+    .select("id, label, budgets!inner(name, status, archived_at)")
+    .eq("brand_id", brandId)
+    .neq("budgets.status", "closed")
+    .is("budgets.archived_at", null)
+    .order("label");
+  if (error) throw error;
+  return data.map((l) => ({
+    id: l.id,
+    label: `${l.budgets.name} › ${l.label}`,
+    keys: keys(l.label, `${l.budgets.name} ${l.label}`),
+  }));
+}
+
+/** Objets auxquels se rattachent les lignes d'un import (comptes, campagnes, sites, lignes budgétaires). */
 export async function getParents(target: ImportTarget, brandId: string) {
+  if (target === "expenses") return getBudgetLineParents(brandId);
   switch (TARGETS[target].marketing) {
     case "social":
       return (await listSocialAccounts(brandId, false)).map((a) => ({
@@ -197,6 +216,29 @@ export async function getImportContext(target: ImportTarget, brandId: string): P
   }
 
   const supabase = await createClient();
+  if (target === "expenses") {
+    const [parents, expenses] = await Promise.all([
+      getBudgetLineParents(brandId),
+      supabase
+        .from("expenses")
+        .select("budget_line_id, expense_date, amount, currency, supplier, external_ref")
+        .eq("brand_id", brandId)
+        .is("archived_at", null)
+        .limit(20000),
+    ]);
+    if (expenses.error) throw expenses.error;
+    return {
+      parents,
+      existingExpenses: expenses.data.map((e) => ({
+        lineId: e.budget_line_id,
+        date: e.expense_date,
+        amount: Number(e.amount),
+        currency: e.currency,
+        supplier: normalizeKey(e.supplier ?? ""),
+        ref: e.external_ref,
+      })),
+    };
+  }
   if (target === "companies") {
     const [companies, industries, sources] = await Promise.all([
       supabase.from("companies").select("name").eq("brand_id", brandId).limit(20000),

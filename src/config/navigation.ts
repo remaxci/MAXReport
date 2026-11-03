@@ -2,6 +2,7 @@ import {
   Building,
   Building2,
   CalendarCheck,
+  Coins,
   ChartColumn,
   ChartNoAxesCombined,
   FileText,
@@ -101,7 +102,7 @@ export const brandNavigation: NavGroup[] = [
     label: "Gestion",
     items: [
       { title: "Objectifs", icon: Target, module: "objectives", path: "/objectifs", permission: "brand.read" },
-      { title: "Budgets", icon: Wallet, module: "budgets" },
+      { title: "Budgets", icon: Wallet, module: "budgets", path: "/budgets", permission: ["budgets.read", "budgets.manage"] },
       { title: "Rapports", icon: ChartColumn, module: "reports" },
       { title: "Imports", icon: Upload, module: "imports", path: "/imports", permission: "imports.manage" },
     ],
@@ -127,6 +128,7 @@ export const adminNavigation: AdminNavItem[] = [
   { title: "Marques", icon: Building2, href: "/parametres/marques", permission: "brands.manage" },
   { title: "Utilisateurs", icon: Users, href: "/parametres/utilisateurs", permission: "users.manage" },
   { title: "Rôles et permissions", icon: ShieldCheck, href: "/parametres/roles", permission: "users.manage" },
+  { title: "Taux de change", icon: Coins, href: "/parametres/taux-de-change", permission: "fx_rates.manage" },
 ];
 
 /** Marque courante d'après l'URL (/m/[marque]/…). */

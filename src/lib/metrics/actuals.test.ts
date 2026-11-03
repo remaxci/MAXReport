@@ -93,3 +93,11 @@ describe("knownActual", () => {
     expect(knownActual(rows, "calls", null, ["activities"]).value).toBe(32);
   });
 });
+
+describe("actualValue avec taux saisis", () => {
+  it("convertit le chiffre d'affaires en USD au taux de la fin de période", () => {
+    const rates = [{ date: "2026-10-31", from: "USD" as const, to: "XOF" as const, rate: 600 }];
+    const result = actualValue(rows, "revenue_signed", COLLEAGUE, { currency: "XOF", date: "2026-11-30", rates });
+    expect(result).toEqual({ value: 300000, excludedCurrencies: [] });
+  });
+});

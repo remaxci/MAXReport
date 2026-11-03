@@ -20,7 +20,8 @@ import {
   type ActualRow,
   type MetricKey,
 } from "@/lib/metrics/actuals";
-import type { Currency } from "@/lib/metrics/currency";
+import type { Currency, FxRate } from "@/lib/metrics/currency";
+import { getFxRates } from "@/features/fx/queries";
 import {
   isIsoDate,
   isoWeekStart,
@@ -67,8 +68,14 @@ async function loadBrand(slug: string) {
 const counted = (r: WeeklyReport) => r.status === "submitted" || r.status === "validated";
 const currencyOf = (brand: BrandSummary) => (brand.reportingCurrency || "XOF") as Currency;
 
-function metricValue(metric: MetricKey, rows: readonly ActualRow[], userId: string | null, brand: BrandSummary) {
-  return knownActual(rows, metric, userId, brand.enabledModules, { currency: currencyOf(brand) });
+function metricValue(
+  metric: MetricKey,
+  rows: readonly ActualRow[],
+  userId: string | null,
+  brand: BrandSummary,
+  conversion: { rates: readonly FxRate[]; date: string },
+) {
+  return knownActual(rows, metric, userId, brand.enabledModules, { currency: currencyOf(brand), ...conversion });
 }
 
 function excludedHint(currencies: string[]): string | undefined {
@@ -103,12 +110,13 @@ async function MyWeek({ slug, query }: { slug: string; query: Query }) {
   const period = periodRange("week", week);
   const base = `/m/${brand.slug}/activites`;
 
-  const [report, actuals, fields, members, recent] = await Promise.all([
+  const [report, actuals, fields, members, recent, rates] = await Promise.all([
     getWeekReport(brand.id, ctx.userId, week),
     getActuals(brand.id, period.start, period.end),
     getCustomFields(brand.id, "weekly_report"),
     getMemberOptions(brand.id),
     listRecentReports(brand.id, ctx.userId),
+    getFxRates(),
   ]);
   const declareOpportunities = !brand.enabledModules.includes("crm");
   const declareMemos = !brand.enabledModules.includes("memos");
@@ -197,7 +205,7 @@ async function MyWeek({ slug, query }: { slug: string; query: Query }) {
             ) : (
               <dl className="flex flex-col gap-3">
                 {observed.map((metric) => {
-                  const result = actualValue(actuals, metric, ctx.userId, { currency: currencyOf(brand) });
+                  const result = actualValue(actuals, metric, ctx.userId, { currency: currencyOf(brand), rates, date: period.end });
                   const hint = excludedHint(result.excludedCurrencies);
                   return (
                     <div key={metric} className="flex flex-col">
@@ -320,12 +328,14 @@ async function Team({ ctx, brand, query }: { ctx: AuthContext; brand: BrandSumma
   const own = can(ctx.access, "activities.manage_own", brand.id);
   const canValidate = can(ctx.access, "activities.validate", brand.id);
 
-  const [reports, actuals, activityMembers, members] = await Promise.all([
+  const [reports, actuals, activityMembers, members, rates] = await Promise.all([
     listReports(brand.id, period.start, period.end),
     getActuals(brand.id, period.start, period.end),
     getActivityMembers(brand.id),
     getMemberOptions(brand.id),
+    getFxRates(),
   ]);
+  const conversion = { rates, date: period.end };
   const labels = new Map(members.map((m) => [m.id, m.label]));
   activityMembers.forEach((m) => labels.set(m.id, m.label));
 
@@ -350,7 +360,7 @@ async function Team({ ctx, brand, query }: { ctx: AuthContext; brand: BrandSumma
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {metrics.map((metric) => {
-          const result = metricValue(metric, actuals, null, brand);
+          const result = metricValue(metric, actuals, null, brand, conversion);
           return (
             <MetricTile
               key={metric}
@@ -404,7 +414,7 @@ async function Team({ ctx, brand, query }: { ctx: AuthContext; brand: BrandSumma
                       />
                     </TableCell>
                     {metrics.map((metric) => {
-                      const result = metricValue(metric, actuals, person.id, brand);
+                      const result = metricValue(metric, actuals, person.id, brand, conversion);
                       return (
                         <TableCell key={metric} className="text-right tabular-nums">
                           {formatMetric(metric, result.value, currency)}

@@ -1951,6 +1951,252 @@ export type Database = {
           },
         ]
       }
+      fx_rates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          from_currency: string
+          id: string
+          rate: number
+          rate_date: string
+          source: string
+          to_currency: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          from_currency: string
+          id?: string
+          rate: number
+          rate_date: string
+          source: string
+          to_currency: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          from_currency?: string
+          id?: string
+          rate?: number
+          rate_date?: string
+          source?: string
+          to_currency?: string
+        }
+        Relationships: []
+      }
+      budgets: {
+        Row: {
+          amount: number
+          archived_at: string | null
+          brand_id: string
+          comments: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          name: string
+          period_end: string
+          period_start: string
+          scope: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount: number
+          archived_at?: string | null
+          brand_id: string
+          comments?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          name: string
+          period_end: string
+          period_start: string
+          scope?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount?: number
+          archived_at?: string | null
+          brand_id?: string
+          comments?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          name?: string
+          period_end?: string
+          period_start?: string
+          scope?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budgets_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budget_lines: {
+        Row: {
+          amount: number
+          brand_id: string
+          budget_id: string
+          campaign_id: string | null
+          category: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string
+          position: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount: number
+          brand_id: string
+          budget_id: string
+          campaign_id?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label: string
+          position?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount?: number
+          brand_id?: string
+          budget_id?: string
+          campaign_id?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string
+          position?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_lines_brand_id_budget_id_fkey"
+            columns: ["brand_id", "budget_id"]
+            isOneToOne: false
+            referencedRelation: "budgets"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "budget_lines_brand_id_campaign_id_fkey"
+            columns: ["brand_id", "campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["brand_id", "id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          archived_at: string | null
+          brand_id: string
+          budget_line_id: string
+          campaign_id: string | null
+          comments: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          description: string
+          expense_date: string
+          external_ref: string | null
+          id: string
+          import_batch_id: string | null
+          paid_on: string | null
+          source: string
+          status: string
+          supplier: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount: number
+          archived_at?: string | null
+          brand_id: string
+          budget_line_id: string
+          campaign_id?: string | null
+          comments?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency: string
+          description: string
+          expense_date: string
+          external_ref?: string | null
+          id?: string
+          import_batch_id?: string | null
+          paid_on?: string | null
+          source?: string
+          status?: string
+          supplier?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount?: number
+          archived_at?: string | null
+          brand_id?: string
+          budget_line_id?: string
+          campaign_id?: string | null
+          comments?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string
+          expense_date?: string
+          external_ref?: string | null
+          id?: string
+          import_batch_id?: string | null
+          paid_on?: string | null
+          source?: string
+          status?: string
+          supplier?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_brand_id_budget_line_id_fkey"
+            columns: ["brand_id", "budget_line_id"]
+            isOneToOne: false
+            referencedRelation: "budget_lines"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "expenses_brand_id_campaign_id_fkey"
+            columns: ["brand_id", "campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "expenses_brand_id_import_batch_id_fkey"
+            columns: ["brand_id", "import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["brand_id", "id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

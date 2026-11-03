@@ -21,3 +21,30 @@ describe("sumInCurrency", () => {
     expect(result).toEqual({ total: 0, excluded: 1 });
   });
 });
+
+describe("sumInCurrency avec taux saisis", () => {
+  it("convertit l'USD au dernier taux connu à la date de chaque montant", () => {
+    const rates = [
+      { date: "2026-09-30", from: "USD" as const, to: "XOF" as const, rate: 600 },
+      { date: "2026-10-31", from: "USD" as const, to: "XOF" as const, rate: 610 },
+    ];
+    const result = sumInCurrency(
+      [
+        { amount: 100, currency: "USD", date: "2026-10-15" },
+        { amount: 100, currency: "USD", date: "2026-11-02" },
+      ],
+      "XOF",
+      "2026-11-02",
+      rates,
+    );
+    expect(result).toEqual({ total: 60000 + 61000, excluded: 0 });
+  });
+
+  it("exclut un montant antérieur à tout taux saisi", () => {
+    const rates = [{ date: "2026-10-31", from: "USD" as const, to: "XOF" as const, rate: 610 }];
+    expect(sumInCurrency([{ amount: 100, currency: "USD", date: "2026-01-15" }], "XOF", "2026-11-02", rates)).toEqual({
+      total: 0,
+      excluded: 1,
+    });
+  });
+});

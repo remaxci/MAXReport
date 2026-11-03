@@ -14,6 +14,7 @@ export const IMPORT_TARGETS = [
   "website_snapshots",
   "companies",
   "historical_metrics",
+  "expenses",
 ] as const;
 export type ImportTarget = (typeof IMPORT_TARGETS)[number];
 
@@ -177,6 +178,30 @@ export const TARGETS: Record<ImportTarget, TargetConfig> = {
         kind: "date",
         aliases: ["prochaine relance", "relance", "date de relance", "follow up"],
       },
+    ],
+  },
+  expenses: {
+    label: "Dépenses",
+    description:
+      "Une ligne par facture ou commande, rattachée à une ligne budgétaire. Même facture d'un même fournisseur, ou même ligne, date et montant : doublon.",
+    module: "budgets",
+    permission: "budgets.manage",
+    fields: [
+      {
+        key: "parent",
+        label: "Ligne budgétaire (libellé)",
+        kind: "parent",
+        aliases: ["ligne budgétaire", "ligne", "poste", "poste budgétaire", "imputation", "budget line"],
+      },
+      { key: "expense_date", label: "Date", kind: "date", required: true, aliases: ["date", "date de facture", "date de la dépense", "invoice date"] },
+      { key: "description", label: "Description", kind: "text", required: true, max: 500, aliases: ["description", "libellé", "objet", "désignation"] },
+      { key: "supplier", label: "Fournisseur", kind: "text", max: 200, aliases: ["fournisseur", "prestataire", "supplier", "vendor"] },
+      { key: "amount", label: "Montant", kind: "money", required: true, aliases: ["montant", "montant ttc", "montant ht", "amount", "total"] },
+      { key: "currency", label: "Devise", kind: "currency", aliases: ["devise", "currency", "monnaie"] },
+      { key: "status", label: "État (engagée / payée)", kind: "text", aliases: ["état", "statut", "status", "payé", "réglé"] },
+      { key: "paid_on", label: "Date de paiement", kind: "date", aliases: ["date de paiement", "payé le", "réglé le", "payment date"] },
+      { key: "external_ref", label: "N° de facture ou de commande", kind: "text", max: 100, aliases: ["n° de facture", "numéro de facture", "facture", "référence", "invoice", "bon de commande"] },
+      { key: "comments", label: "Commentaires", kind: "text", max: 2000, aliases: ALIASES.comments },
     ],
   },
   historical_metrics: {

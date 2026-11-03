@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getActuals } from "@/features/activities/queries";
+import { getFxRates } from "@/features/fx/queries";
 import { formatMetric } from "@/features/activities/view";
 import { BackLink } from "@/features/crm/view";
 import { getMemberOptions } from "@/features/registers/queries";
@@ -92,7 +93,11 @@ async function Objectives({ slug, state }: { slug: string; state: ObjectiveState
   const canManage = can(ctx.access, "objectives.manage", brand.id);
   const readAll = can(ctx.access, "objectives.read_all", brand.id);
 
-  const [objectives, members] = await Promise.all([listObjectives(brand.id, state, today), getMemberOptions(brand.id)]);
+  const [objectives, members, rates] = await Promise.all([
+    listObjectives(brand.id, state, today),
+    getMemberOptions(brand.id),
+    getFxRates(),
+  ]);
   const labels = new Map(members.map((m) => [m.id, m.label]));
 
   // Un calcul des réalisés par période distincte.
@@ -119,6 +124,8 @@ async function Objectives({ slug, state }: { slug: string; state: ObjectiveState
     const rows = actualsByPeriod.get(`${o.periodStart}|${o.periodEnd}`) ?? [];
     const actual = knownActual(rows, o.metric, o.userId, brand.enabledModules, {
       currency: (o.currency ?? brand.reportingCurrency) as Currency,
+      date: o.periodEnd,
+      rates,
     });
     return { actual, reading: readObjective(actual.value, o.target, { start: o.periodStart, end: o.periodEnd }, today) };
   };

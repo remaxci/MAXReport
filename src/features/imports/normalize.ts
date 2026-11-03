@@ -46,6 +46,8 @@ export type ImportContext = {
   options?: Record<string, { value: string; label: string }[]>;
   members?: { id: string; label: string; keys: string[] }[];
   existingHistorical?: (Period & { metric: string; userId: string | null; currency: string | null })[];
+  /** Dépenses déjà saisies (non archivées) : ligne, date, montant, devise, fournisseur et référence. */
+  existingExpenses?: { lineId: string; date: string; amount: number; currency: string; supplier: string; ref: string | null }[];
 };
 
 export type LineStatus = "ok" | "duplicate" | "error";
@@ -144,6 +146,8 @@ function readLine(
       return readCompany(fields, cell, options, context);
     case "historical_metrics":
       return readHistorical(cell, options, context);
+    case "expenses":
+      return readExpense(fields, cell, options, context);
   }
 }
 
@@ -308,6 +312,73 @@ function readHistorical(cell: (key: string) => Cell, options: ImportOptions, con
     summary: `${METRICS[metric].label} · ${member?.label ?? "Équipe"} · ${rangeLabel(period.start, period.end)}`,
     dedupKey: `${metric}|${userId ?? ""}|${currency ?? ""}`,
     period,
+    existing,
+  };
+}
+
+const PAID = new Set(["payee", "paye", "paid", "reglee", "regle", "oui", "yes", "solde", "soldee"]);
+const COMMITTED = new Set(["engagee", "engage", "committed", "commandee", "commande", "non", "no", "apayer", "enattente"]);
+
+function readExpense(fields: TargetField[], cell: (key: string) => Cell, options: ImportOptions, context: ImportContext): Read {
+  const field = (key: string) => fields.find((f) => f.key === key)!;
+  const lines = context.parents ?? [];
+  const rawLine = cell("parent");
+  let line = lines.find((l) => l.id === options.defaultParentId);
+  if (!isBlank(rawLine)) {
+    const key = normalizeKey(cellText(rawLine));
+    line = lines.find((l) => l.keys.includes(key)) ?? fail(`Ligne budgétaire introuvable : « ${cellText(rawLine)} ».`);
+  }
+  if (!line) fail("Ligne budgétaire non précisée : choisissez-la dans les options ou associez une colonne.");
+  const owner = line!;
+
+  const rawDate = cell("expense_date");
+  if (isBlank(rawDate)) fail("Date manquante.");
+  const date = parseDateValue(rawDate, options.dateFormat) ?? fail(`Date illisible : « ${cellText(rawDate)} ».`);
+  const description = readText(field("description"), cell("description")) ?? fail("Description manquante.");
+  const supplier = readText(field("supplier"), cell("supplier"));
+  const amount = readMeasure(field("amount"), cell("amount"), options) ?? fail("Montant manquant.");
+  if (amount === 0) fail("Montant : supérieur à 0 attendu.");
+
+  const rawCurrency = cell("currency");
+  const currency = isBlank(rawCurrency) ? (options.currency ?? null) : cellText(rawCurrency).toUpperCase();
+  if (!currency) fail("Devise manquante.");
+  if (!(CURRENCIES as readonly string[]).includes(currency!)) fail(`Devise non prise en charge : « ${currency} » (XOF, EUR ou USD).`);
+
+  const rawStatus = cell("status");
+  const statusKey = isBlank(rawStatus) ? "" : normalizeKey(cellText(rawStatus));
+  if (statusKey && !PAID.has(statusKey) && !COMMITTED.has(statusKey)) fail(`État inconnu : « ${cellText(rawStatus)} » (engagée ou payée).`);
+  const rawPaidOn = cell("paid_on");
+  const paidOn = isBlank(rawPaidOn)
+    ? null
+    : (parseDateValue(rawPaidOn, options.dateFormat) ?? fail(`Date de paiement illisible : « ${cellText(rawPaidOn)} ».`));
+  const status = PAID.has(statusKey) || (!statusKey && paidOn) ? "paid" : "committed";
+  const ref = readText(field("external_ref"), cell("external_ref"));
+  const comments = readText(field("comments"), cell("comments"));
+
+  const supplierKey = normalizeKey(supplier ?? "");
+  const existing = (context.existingExpenses ?? []).find(
+    (e) =>
+      (ref !== null && e.ref === ref && e.supplier === supplierKey) ||
+      (e.lineId === owner.id && e.date === date && e.amount === amount && e.currency === currency),
+  )
+    ? "Déjà en base : même facture, ou même ligne, date et montant."
+    : null;
+  return {
+    record: {
+      budget_line_id: owner.id,
+      campaign_id: null,
+      supplier,
+      description,
+      expense_date: date,
+      amount,
+      currency,
+      status,
+      paid_on: status === "paid" ? (paidOn ?? date) : null,
+      external_ref: ref,
+      comments,
+    },
+    summary: `${owner.label} · ${description} · ${formatDate(date)}`,
+    dedupKey: ref !== null ? `ref|${supplierKey}|${ref}` : `same|${owner.id}|${date}|${amount}|${currency}`,
     existing,
   };
 }

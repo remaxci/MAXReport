@@ -56,6 +56,7 @@ import {
   type ContractDefaults,
   type OpportunityDefaults,
 } from "./components/forms";
+import { getFxRates } from "@/features/fx/queries";
 import { sumInCurrency } from "./money";
 import {
   getCompany,
@@ -522,6 +523,7 @@ async function Opportunities({ slug, query }: { slug: string; query: Record<stri
   const owners = new Map(members.map((m) => [m.id, m.label]));
   const base = `/m/${brand.slug}/opportunites`;
   const today = todayIso();
+  const rates = await getFxRates();
   const target = brand.reportingCurrency as Currency;
   const columns = stages.filter((s) => s.isActive || opportunities.some((o) => o.stageId === s.id));
   const moveOptions = stages.filter((s) => s.isActive).map((s) => ({ id: s.id, label: s.label }));
@@ -534,13 +536,14 @@ async function Opportunities({ slug, query }: { slug: string; query: Record<stri
       .map((o) => ({ amount: o.amount === null ? null : (o.amount * (openStages.get(o.stageId) ?? 0)) / 100, currency: o.currency })),
     target,
     today,
+    rates,
   );
 
   return (
     <Page>
       <PageHeader
         title="Opportunités"
-        description={`${brand.name} · pipeline pondéré : ${formatMoney(weighted.total, target)}${weighted.excluded ? ` (hors ${weighted.excluded} montant(s) en USD)` : ""}${access.readAll ? "" : " · vos opportunités"}`}
+        description={`${brand.name} · pipeline pondéré : ${formatMoney(weighted.total, target)}${weighted.excluded ? ` (hors ${weighted.excluded} montant(s) sans taux de change)` : ""}${access.readAll ? "" : " · vos opportunités"}`}
       >
         {access.canCreate && (
           <Button nativeButton={false} render={<Link href={`${base}/nouvelle`} />}>
@@ -558,7 +561,7 @@ async function Opportunities({ slug, query }: { slug: string; query: Record<stri
       <div className="flex gap-4 overflow-x-auto pb-2">
         {columns.map((stage) => {
           const items = opportunities.filter((o) => o.stageId === stage.id);
-          const total = sumInCurrency(items, target, today);
+          const total = sumInCurrency(items, target, today, rates);
           return (
             <section key={stage.id} aria-label={stage.label} className="flex w-72 shrink-0 flex-col gap-3 rounded-xl bg-muted/50 p-3">
               <header className="flex flex-col gap-0.5">
@@ -832,17 +835,22 @@ async function Contracts({ slug, query }: { slug: string; query: Record<string, 
   const access = ownedAccess(ctx.access, CONTRACT_PERMISSIONS, brand.id);
   if (!access.canRead) return <Forbidden />;
   const filters = parseCrmFilters(query);
-  const [contracts, members] = await Promise.all([listContracts(brand.id, filters), getMemberOptions(brand.id)]);
+  const [contracts, members, rates] = await Promise.all([listContracts(brand.id, filters), getMemberOptions(brand.id), getFxRates()]);
   const owners = new Map(members.map((m) => [m.id, m.label]));
   const base = `/m/${brand.slug}/contrats`;
   const target = brand.reportingCurrency as Currency;
-  const total = sumInCurrency(contracts, target, todayIso());
+  const total = sumInCurrency(
+    contracts.map((c) => ({ amount: c.amount, currency: c.currency, date: c.signedOn })),
+    target,
+    todayIso(),
+    rates,
+  );
 
   return (
     <Page>
       <PageHeader
         title="Contrats signés"
-        description={`${brand.name} · ${contracts.length} contrat(s) · ${formatMoney(total.total, target)}${total.excluded ? ` (hors ${total.excluded} montant(s) en USD)` : ""}${access.readAll ? "" : " · vos contrats"}`}
+        description={`${brand.name} · ${contracts.length} contrat(s) · ${formatMoney(total.total, target)}${total.excluded ? ` (hors ${total.excluded} montant(s) sans taux de change)` : ""}${access.readAll ? "" : " · vos contrats"}`}
       >
         {access.canCreate && (
           <Button nativeButton={false} render={<Link href={`${base}/nouveau`} />}>

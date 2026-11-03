@@ -2,7 +2,7 @@
 // (fonction SQL `metric_actuals`). Une seule source par indicateur :
 // docs/architecture.md, section 6.
 
-import { convert, type Currency } from "./currency";
+import { convert, type Currency, type FxRate } from "./currency";
 
 export const METRIC_KEYS = [
   "calls",
@@ -85,7 +85,7 @@ export function actualValue(
   rows: readonly ActualRow[],
   metric: MetricKey,
   userId: string | null,
-  options: { currency?: Currency; date?: string } = {},
+  options: { currency?: Currency; date?: string; rates?: readonly FxRate[] } = {},
 ): ActualValue {
   let value = 0;
   const excluded = new Set<string>();
@@ -98,7 +98,7 @@ export function actualValue(
     }
     const target = options.currency ?? "XOF";
     const converted = row.currency
-      ? convert(row.value, row.currency as Currency, target, options.date ?? "9999-12-31", [])
+      ? convert(row.value, row.currency as Currency, target, options.date ?? "9999-12-31", options.rates ?? [])
       : null;
     if (converted === null) excluded.add(row.currency ?? "?");
     else value += converted;
@@ -116,7 +116,7 @@ export function knownActual(
   metric: MetricKey,
   userId: string | null,
   enabledModules: readonly string[],
-  options: { currency?: Currency; date?: string } = {},
+  options: { currency?: Currency; date?: string; rates?: readonly FxRate[] } = {},
 ): { value: number | null; excludedCurrencies: string[] } {
   const matched = rows.some((r) => r.metricKey === metric && (userId === null || r.userId === userId));
   if (!matched && comesFromReports(metric, enabledModules)) return { value: null, excludedCurrencies: [] };

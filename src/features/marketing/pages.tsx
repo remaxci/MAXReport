@@ -14,7 +14,8 @@ import { getCustomFields } from "@/features/custom-fields/queries";
 import { getMemberOptions } from "@/features/registers/queries";
 import { ActionButton, EditDetails } from "@/features/settings/components/controls";
 import { formatDate, formatEvolution, formatMoney, formatNumber, formatPercent, todayIso } from "@/lib/format";
-import type { Currency } from "@/lib/metrics/currency";
+import type { Currency, FxRate } from "@/lib/metrics/currency";
+import { getFxRates } from "@/features/fx/queries";
 import { cpl, ctr, conversionRate, engagementRate, ratio } from "@/lib/metrics/formulas";
 import { aggregateSnapshots, evolution, type Aggregated } from "@/lib/metrics/snapshots";
 import {
@@ -208,9 +209,10 @@ async function MarketingList({ kind, slug, query }: { kind: MarketingKind; slug:
 
   const platforms = await getPlatforms();
   const labels = new Map(platforms.map((p) => [p.key, p.label]));
-  const [items, snapshots] = await Promise.all([
+  const [items, snapshots, rates] = await Promise.all([
     listItems(kind, brand.id, archived, labels),
     listSnapshots(kind, brand.id, { from: previous.start, to: period.end }),
+    kind === "campaign" ? getFxRates() : Promise.resolve([]),
   ]);
   const fields = aggregationFields(kind);
   const rows: Row[] = items.map((item) => {
@@ -238,7 +240,7 @@ async function MarketingList({ kind, slug, query }: { kind: MarketingKind; slug:
       </div>
       <StraddleNotice count={straddling} />
       {kind === "social" && <SocialComparison rows={rows} base={base} />}
-      {kind === "campaign" && <CampaignComparison rows={rows} base={base} brand={brand} period={period} />}
+      {kind === "campaign" && <CampaignComparison rows={rows} base={base} brand={brand} period={period} rates={rates} />}
       {kind === "website" && <WebsiteComparison rows={rows} base={base} />}
     </Page>
   );
@@ -330,13 +332,26 @@ function SocialComparison({ rows, base }: { rows: Row[]; base: string }) {
   );
 }
 
-function CampaignComparison({ rows, base, brand, period }: { rows: Row[]; base: string; brand: BrandSummary; period: Period }) {
+function CampaignComparison({
+  rows,
+  base,
+  brand,
+  period,
+  rates,
+}: {
+  rows: Row[];
+  base: string;
+  brand: BrandSummary;
+  period: Period;
+  rates: readonly FxRate[];
+}) {
   const target = (brand.reportingCurrency || "XOF") as Currency;
   const spendOf = (from: "current" | "previous") =>
     sumInCurrency(
       rows.map((r) => ({ amount: r[from].values.spend, currency: r.item.currency ?? null })),
       target,
       period.end,
+      rates,
     );
   const spend = spendOf("current");
   const spendBefore = spendOf("previous");
@@ -351,7 +366,7 @@ function CampaignComparison({ rows, base, brand, period }: { rows: Row[]; base: 
           value={anySpend ? formatMoney(spend.total, target) : "—"}
           hint={
             spend.excluded > 0
-              ? `Hors ${spend.excluded} montant(s) en USD (taux de change à saisir)`
+              ? `Hors ${spend.excluded} montant(s) sans taux de change (Paramètres › Taux de change)`
               : anySpend
                 ? evolutionHint(spend.total, spendBefore.total)
                 : undefined

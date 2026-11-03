@@ -195,3 +195,80 @@ describe("checkBatch · historique agrégé", () => {
     ]);
   });
 });
+
+describe("checkBatch · dépenses", () => {
+  const context: ImportContext = {
+    parents: [{ id: "line-1", label: "Marketing 2026 › Impression", keys: ["impression", "marketing2026impression"] }],
+    existingExpenses: [
+      { lineId: "line-1", date: "2026-10-05", amount: 150000, currency: "XOF", supplier: "imprimerieabc", ref: "F-100" },
+    ],
+  };
+  const mapping = { parent: 0, expense_date: 1, description: 2, supplier: 3, amount: 4, status: 5, external_ref: 6 };
+  const options = readOptions({ currency: "XOF" });
+
+  it("prépare les dépenses, état et devise compris", () => {
+    const result = checkBatch(
+      "expenses",
+      [
+        ["Impression", "02/11/2026", "Affiches", "Imprimerie ABC", "250 000", "Payée", "F-101"],
+        ["Impression", "03/11/2026", "Flyers", "", "80 000,50", "", ""],
+      ],
+      mapping,
+      options,
+      context,
+    );
+    expect(result.lines.map((l) => l.record)).toEqual([
+      {
+        budget_line_id: "line-1",
+        campaign_id: null,
+        supplier: "Imprimerie ABC",
+        description: "Affiches",
+        expense_date: "2026-11-02",
+        amount: 250000,
+        currency: "XOF",
+        status: "paid",
+        paid_on: "2026-11-02",
+        external_ref: "F-101",
+        comments: null,
+      },
+      {
+        budget_line_id: "line-1",
+        campaign_id: null,
+        supplier: null,
+        description: "Flyers",
+        expense_date: "2026-11-03",
+        amount: 80000.5,
+        currency: "XOF",
+        status: "committed",
+        paid_on: null,
+        external_ref: null,
+        comments: null,
+      },
+    ]);
+  });
+
+  it("écarte une facture déjà saisie, une dépense identique et les lignes inconnues", () => {
+    const result = checkBatch(
+      "expenses",
+      [
+        ["Impression", "20/11/2026", "Relance", "IMPRIMERIE ABC", "1 000", "", "F-100"],
+        ["Impression", "05/10/2026", "Même dépense", "", "150 000", "", ""],
+        ["Événementiel", "05/10/2026", "Stand", "", "10", "", ""],
+        ["Impression", "06/10/2026", "Bâche", "", "10", "peut-être", ""],
+        ["Impression", "07/10/2026", "Bâche", "Imprimerie ABC", "10", "", "F-200"],
+        ["Impression", "08/10/2026", "Bâche bis", "imprimerie abc", "12", "", "F-200"],
+      ],
+      mapping,
+      options,
+      context,
+    );
+    expect(result.lines.map((l) => [l.status, l.message])).toEqual([
+      ["duplicate", "Déjà en base : même facture, ou même ligne, date et montant."],
+      ["duplicate", "Déjà en base : même facture, ou même ligne, date et montant."],
+      ["error", "Ligne budgétaire introuvable : « Événementiel »."],
+      ["error", "État inconnu : « peut-être » (engagée ou payée)."],
+      ["ok", null],
+      ["duplicate", "Déjà présent ligne 6 du fichier."],
+    ]);
+  });
+});
