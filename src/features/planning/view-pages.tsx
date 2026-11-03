@@ -28,7 +28,7 @@ function first(value: string | string[] | undefined): string | undefined {
 }
 
 /** Filtres communs au Kanban et au calendrier : responsable et projet. */
-function ScopeFilters({
+export function ScopeFilters({
   action,
   filters,
   members,

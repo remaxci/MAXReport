@@ -20,9 +20,15 @@ import { ActionButton, EditDetails } from "@/features/settings/components/contro
 import { formatDate, todayIso } from "@/lib/format";
 import { getAuthContext, type BrandSummary } from "@/server/authz/context";
 import { can, type Access, type Permission } from "@/server/authz/permissions";
+import { AttachmentsPanel } from "@/features/registers/components/document-panels";
+import type { ActionState } from "@/lib/form";
 import {
+  addDependency,
   addTaskComment,
   deleteMilestone,
+  deleteTaskAttachment,
+  getTaskAttachmentUrl,
+  removeDependency,
   saveMilestone,
   saveProject,
   saveTask,
@@ -30,10 +36,12 @@ import {
   setProjectArchived,
   setTaskArchived,
   updateTaskProgress,
+  uploadTaskAttachment,
 } from "./actions";
 import { PRIORITIES, PRIORITY_LABELS, PROJECT_STATUS_LABELS } from "./config";
 import {
   CommentForm,
+  DependencyForm,
   MilestoneForm,
   ProjectForm,
   TaskForm,
@@ -48,10 +56,13 @@ import {
   getProject,
   getStatusCategories,
   getTask,
+  getTasksByIds,
   getTaskStatuses,
   listAssignedTasks,
+  listDependencies,
   listMilestones,
   listProjects,
+  listTaskAttachments,
   listTaskEvents,
   listTasks,
   type ProjectRow,
@@ -59,6 +70,7 @@ import {
   type TaskStatus,
 } from "./queries";
 import { compareTasks, DUE_BUCKET_LABELS, dueBucket, isOpen, isOverdue, parseTaskFilters, projectProgress, type DueBucket } from "./rules";
+import { createsCycle, dependencyConflict, isBlocked, milestoneConflict } from "./schedule";
 
 type Params = Promise<{ brand: string }>;
 type ParamsWithId = Promise<{ brand: string; id: string }>;
@@ -74,6 +86,51 @@ const statusMap = (statuses: TaskStatus[]) => new Map(statuses.map((s) => [s.id,
 
 function TaskStatusBadge({ status }: { status: TaskStatus | undefined }) {
   return status ? <StatusBadge label={status.label} color={status.color} /> : <span>—</span>;
+}
+
+type FormAction = (previous: ActionState, formData: FormData) => Promise<ActionState>;
+
+/** Prédécesseurs ou successeurs d'une tâche, avec l'alerte de dates. */
+function DependencyList({
+  title,
+  rows,
+  base,
+  statuses,
+}: {
+  title: string;
+  rows: { task: TaskRow; conflict: boolean; remove?: FormAction }[];
+  base: string;
+  statuses: Map<string, TaskStatus>;
+}) {
+  return (
+    <section className="flex flex-col gap-1">
+      <h3 className="text-sm font-medium">{title}</h3>
+      {rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Aucune tâche.</p>
+      ) : (
+        <ul className="flex flex-col divide-y">
+          {rows.map(({ task, conflict, remove }) => (
+            <li key={task.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+              <Link href={`${base}/taches/${task.id}`} className="min-w-0 flex-1 basis-40 truncate text-sm font-medium underline-offset-4 hover:underline">
+                {task.title}
+              </Link>
+              <TaskStatusBadge status={statuses.get(task.statusId)} />
+              <span className="text-xs text-muted-foreground">
+                {formatDate(task.startOn)} → {formatDate(task.dueOn)}
+              </span>
+              {conflict && <Badge variant="destructive">Dates incompatibles</Badge>}
+              {task.archivedAt && <Badge variant="secondary">Archivée</Badge>}
+              {remove && (
+                <ActionButton action={remove} variant="ghost">
+                  Retirer
+                </ActionButton>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 }
 
 // =====================================================================
@@ -582,6 +639,8 @@ async function taskFormData(brand: BrandSummary, access: Access) {
   ]);
   return {
     statuses,
+    taskRows: parents,
+    milestoneRows: milestones,
     projects: projects.map((p) => ({ id: p.id, label: p.name })),
     milestones: milestones.map((m) => ({ id: m.id, label: `${m.name} (${formatDate(m.dueOn)})`, projectId: m.projectId })),
     members,
@@ -677,13 +736,35 @@ async function TaskDetail({ slug, id }: { slug: string; id: string }) {
   if (!task) notFound();
   const today = todayIso();
   const isAssignee = task.assigneeId === ctx.userId;
-  const [data, events, subtasks] = await Promise.all([
+  const [data, events, subtasks, dependencies, attachments] = await Promise.all([
     taskFormData(brand, ctx.access),
     listTaskEvents(brand.id, task.id),
     task.parentId ? Promise.resolve([] as TaskRow[]) : listTasks(brand.id, { archived: false }, { parentId: task.id }),
+    listDependencies(brand.id),
+    listTaskAttachments(brand.id, task.id),
   ]);
   const byStatus = statusMap(data.statuses);
   const status = byStatus.get(task.statusId);
+
+  // Dépendances : prédécesseurs (ce que la tâche attend) et successeurs (ce qu'elle bloque).
+  const predecessorIds = dependencies.filter((d) => d.taskId === task.id).map((d) => d.dependsOnId);
+  const successorIds = dependencies.filter((d) => d.dependsOnId === task.id).map((d) => d.taskId);
+  const known = new Map(data.taskRows.map((t) => [t.id, t]));
+  const missing = [...predecessorIds, ...successorIds].filter((linkedId) => !known.has(linkedId));
+  for (const t of await getTasksByIds(brand.id, missing)) known.set(t.id, t);
+  const dated = (t: TaskRow) => ({ startOn: t.startOn, dueOn: t.dueOn, category: byStatus.get(t.statusId)?.category ?? ("draft" as const) });
+  const self = dated(task);
+  const predecessors = predecessorIds.map((linkedId) => known.get(linkedId)).filter((t): t is TaskRow => t !== undefined);
+  const successors = successorIds.map((linkedId) => known.get(linkedId)).filter((t): t is TaskRow => t !== undefined);
+  const blocked = isBlocked(predecessors.filter((p) => !p.archivedAt).map(dated));
+  const milestoneRow = data.milestoneRows.find((m) => m.id === task.milestoneId);
+  const afterMilestone = milestoneRow ? milestoneConflict(self, milestoneRow) : false;
+  const projectNames = new Map(data.projects.map((p) => [p.id, p.label]));
+  const candidates = data.taskRows
+    .filter((t) => t.id !== task.id && !predecessorIds.includes(t.id) && !createsCycle(dependencies, task.id, t.id))
+    .map((t) => ({ id: t.id, label: t.projectId && projectNames.has(t.projectId) ? `${t.title} · ${projectNames.get(t.projectId)}` : t.title }))
+    .sort((a, b) => a.label.localeCompare(b.label, "fr"));
+  const canEditFiles = (canManage || isAssignee) && !task.archivedAt;
   const labels = new Map(data.members.map((m) => [m.id, m.label]));
   const base = `/m/${brand.slug}`;
   const project = data.projects.find((p) => p.id === task.projectId);
@@ -711,6 +792,8 @@ async function TaskDetail({ slug, id }: { slug: string; id: string }) {
           <TaskStatusBadge status={status} />
           <PriorityBadge priority={task.priority} />
           {overdue && <Badge variant="destructive">En retard</Badge>}
+          {blocked && isOpen(self.category) && <Badge variant="secondary">Bloquée</Badge>}
+          {afterMilestone && <Badge variant="destructive">Après son jalon</Badge>}
           {task.archivedAt && <Badge variant="secondary">Archivée</Badge>}
           {canManage && (
             <ActionButton action={setTaskArchived.bind(null, brand.id, task.id, !task.archivedAt)} variant="ghost">
@@ -796,6 +879,54 @@ async function TaskDetail({ slug, id }: { slug: string; id: string }) {
               </CardContent>
             </Card>
           )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Dépendances</CardTitle>
+              <CardDescription>Une tâche commence quand celles qu&apos;elle attend sont terminées.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-5">
+              {blocked && isOpen(self.category) && (
+                <p className="text-sm font-medium">Bloquée : au moins une tâche attendue n&apos;est pas terminée.</p>
+              )}
+              <DependencyList
+                title="Attend la fin de"
+                base={base}
+                statuses={byStatus}
+                rows={predecessors.map((p) => ({
+                  task: p,
+                  conflict: dependencyConflict(self, dated(p)),
+                  remove: canManage ? removeDependency.bind(null, brand.id, task.id, p.id) : undefined,
+                }))}
+              />
+              <DependencyList
+                title="Bloque"
+                base={base}
+                statuses={byStatus}
+                rows={successors.map((s) => ({
+                  task: s,
+                  conflict: dependencyConflict(dated(s), self),
+                  remove: canManage ? removeDependency.bind(null, brand.id, s.id, task.id) : undefined,
+                }))}
+              />
+              {canManage && !task.archivedAt && <DependencyForm action={addDependency.bind(null, brand.id, task.id)} tasks={candidates} />}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Pièces jointes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AttachmentsPanel
+                attachments={attachments}
+                canManage={canEditFiles}
+                getUrl={getTaskAttachmentUrl}
+                uploadAction={uploadTaskAttachment.bind(null, brand.id, task.id)}
+                deleteActions={Object.fromEntries(attachments.map((a) => [a.id, deleteTaskAttachment.bind(null, brand.id, task.id, a.id)]))}
+              />
+            </CardContent>
+          </Card>
         </div>
 
         <Card>
