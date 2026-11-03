@@ -245,7 +245,7 @@ Le `(select …)` fait évaluer la fonction une seule fois par requête, pas à 
 | `pipeline_stages` | brand_id, key, label, position, probability, category (`open`, `won`, `lost`) |
 | `custom_field_definitions` | voir section 5 |
 | `metric_settings` | brand_id, metric_key, enabled, source (`declared` ou `crm`), seuils d'alerte |
-| `report_templates` | brand_id (null = modèle commun), name, period_type, sections jsonb |
+| `report_templates` | brand_id, name (unique par marque), description, sections (parmi commercial, objectives, social, campaigns, websites, budgets), period_kind |
 
 ### Commercial
 
