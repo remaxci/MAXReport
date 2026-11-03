@@ -75,12 +75,15 @@ Supabase
    └─ Storage  : bucket privé « attachments », URL signées de courte durée
 ```
 
-La clé secrète Supabase (`SUPABASE_SECRET_KEY`) ne sert que côté serveur, pour les invitations et l'administration. Elle ne porte jamais le préfixe `NEXT_PUBLIC_`.
+L'application n'utilise aucune clé secrète Supabase : les invitations partent de Supabase (Authentication › Users › *Invite user*), et l'application ne fait que recevoir le lien. Si une clé secrète devenait nécessaire, elle resterait côté serveur, sans le préfixe `NEXT_PUBLIC_`.
+
+**Accès par e-mail** (évolution du 3 novembre 2026). Les e-mails d'invitation et de réinitialisation (modèles dans `supabase/templates/`) mènent à `/confirmer-acces?token_hash=…&type=invite|recovery`. La page affiche seulement le formulaire du mot de passe ; le jeton est vérifié à l'envoi (`verifyOtp`, puis `updateUser`), si bien qu'un antivirus de messagerie qui visite le lien ne le consomme pas. Le mot de passe est contrôlé avant la vérification (10 caractères au moins, 72 octets au plus), pour ne pas griller un lien sur un refus ; si Supabase le rejette malgré tout, la session est fermée et il faut un nouveau lien. `/mot-de-passe-oublie` répond de la même façon que le compte existe ou non. `/compte` permet de changer son mot de passe en confirmant l'actuel. La logique est dans `src/features/auth/flows.ts`, testée sans réseau. Tant que la variable serveur `EMAIL_LINKS_ENABLED` ne vaut pas `true` (à poser une fois le SMTP et les modèles en place, puis redéployer), « Mot de passe oublié ? » est masqué, la demande de lien est refusée et les aides à l'écran indiquent *Add user* avec un mot de passe provisoire.
 
 ### Navigation
 
 ```
-/login
+/login · /mot-de-passe-oublie · /confirmer-acces   (sans session)
+/compte                    mot de passe de la personne connectée
 /                          → marque par défaut de l'utilisateur, ou /direction
 /direction                 tableau de bord consolidé (filtres marque et période)
 /m/[marque]                tableau de bord de la marque

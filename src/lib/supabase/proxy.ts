@@ -1,8 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Pages accessibles sans être connecté.
-const PUBLIC_PATHS = ["/login"];
+// Pages accessibles sans être connecté : connexion, demande d'un lien de
+// réinitialisation, lien d'invitation ou de réinitialisation reçu par e-mail.
+const PUBLIC_PATHS = ["/login", "/mot-de-passe-oublie", "/confirmer-acces"];
 
 // Rafraîchit la session Supabase à chaque requête et renvoie vers /login
 // les visiteurs non connectés. C'est une vérification rapide : les données
