@@ -3,6 +3,7 @@ import type { StatusCategory } from "@/features/settings/constants";
 import { createClient } from "@/lib/supabase/server";
 import type { Priority, ProjectStatus } from "./config";
 import type { TaskFilters } from "./rules";
+import type { Dependency } from "./schedule";
 
 // Lectures sous RLS : projets, jalons et tâches exigent planning.read sur la
 // marque. Les filtres réduisent le résultat, ils ne donnent aucun droit.
@@ -275,6 +276,40 @@ export async function listTaskEvents(brandId: string, taskId: string): Promise<T
     .limit(200);
   if (error) throw error;
   return data.map((e) => ({ id: e.id, type: e.type, occurredAt: e.occurred_at, actorId: e.actor_id, payload: asRecord(e.payload) }));
+}
+
+/** Tâches désignées (archivées comprises), par exemple les prédécesseurs d'une tâche. */
+export async function getTasksByIds(brandId: string, ids: string[]): Promise<TaskRow[]> {
+  if (ids.length === 0) return [];
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("tasks").select(TASK_COLUMNS).eq("brand_id", brandId).in("id", ids);
+  if (error) throw error;
+  return (data as RawTask[]).map(toTask);
+}
+
+// ---------------------------------------------------------------------
+// Dépendances et pièces jointes
+// ---------------------------------------------------------------------
+
+export async function listDependencies(brandId: string): Promise<Dependency[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("task_dependencies").select("task_id, depends_on_id").eq("brand_id", brandId).limit(5000);
+  if (error) throw error;
+  return data.map((d) => ({ taskId: d.task_id, dependsOnId: d.depends_on_id }));
+}
+
+export type TaskAttachment = { id: string; fileName: string; mimeType: string; sizeBytes: number; createdAt: string };
+
+export async function listTaskAttachments(brandId: string, taskId: string): Promise<TaskAttachment[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("task_attachments")
+    .select("id, file_name, mime_type, size_bytes, created_at")
+    .eq("brand_id", brandId)
+    .eq("task_id", taskId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data.map((a) => ({ id: a.id, fileName: a.file_name, mimeType: a.mime_type, sizeBytes: a.size_bytes, createdAt: a.created_at }));
 }
 
 // ---------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import { CalendarDays, List, SquareKanban } from "lucide-react";
+import { CalendarDays, ChartGantt, Gauge, List, SquareKanban } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -9,12 +9,14 @@ const TASK_VIEWS = [
   { key: "liste", label: "Liste", path: "/taches", icon: List },
   { key: "kanban", label: "Kanban", path: "/taches/kanban", icon: SquareKanban },
   { key: "calendrier", label: "Calendrier", path: "/taches/calendrier", icon: CalendarDays },
+  { key: "gantt", label: "Gantt", path: "/taches/gantt", icon: ChartGantt },
+  { key: "charge", label: "Charge", path: "/taches/charge", icon: Gauge },
 ] as const;
 
 /** Passage d'une vue des tâches à l'autre (les filtres sont propres à chaque vue). */
 export function TaskViewTabs({ base, current }: { base: string; current: (typeof TASK_VIEWS)[number]["key"] }) {
   return (
-    <nav aria-label="Vues des tâches" className="flex w-fit gap-1 rounded-lg bg-muted p-1">
+    <nav aria-label="Vues des tâches" className="flex w-fit max-w-full flex-wrap gap-1 rounded-lg bg-muted p-1">
       {TASK_VIEWS.map((view) => (
         <Link
           key={view.key}
@@ -96,6 +98,14 @@ function describe(event: TaskEvent): { title: string; detail?: string } {
       return { title: "Archivée" };
     case "restored":
       return { title: "Restaurée" };
+    case "dependency_added":
+      return { title: "Dépendance ajoutée", detail: str(p.task) ? `Attend la fin de « ${str(p.task)} »` : undefined };
+    case "dependency_removed":
+      return { title: "Dépendance retirée", detail: str(p.task) ? `N'attend plus « ${str(p.task)} »` : undefined };
+    case "attachment_added":
+      return { title: "Pièce jointe ajoutée", detail: str(p.file_name) || undefined };
+    case "attachment_removed":
+      return { title: "Pièce jointe supprimée", detail: str(p.file_name) || undefined };
     default:
       return { title: event.type };
   }

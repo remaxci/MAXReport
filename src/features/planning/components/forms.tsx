@@ -325,3 +325,22 @@ export function CommentForm({ action }: { action: FormAction }) {
     </form>
   );
 }
+
+/** Ajout d'une dépendance : la liste ne propose que les tâches qui ne fermeraient pas de boucle. */
+export function DependencyForm({ action, tasks }: { action: FormAction; tasks: Option[] }) {
+  const [state, formAction, pending] = useActionState(action, null);
+  if (tasks.length === 0) {
+    return <p className="text-sm text-muted-foreground">Aucune autre tâche ne peut être ajoutée comme prédécesseur.</p>;
+  }
+  return (
+    <form action={formAction} className="flex flex-wrap items-end gap-3">
+      <Field label="Attendre la fin de" name="dependsOnId" state={state} className="min-w-0 flex-1 basis-60">
+        <Select name="dependsOnId" options={tasks} placeholder="Choisir une tâche…" required />
+      </Field>
+      <Button type="submit" size="sm" variant="outline" disabled={pending}>
+        {pending ? "Ajout…" : "Ajouter"}
+      </Button>
+      <FormMessage state={state} />
+    </form>
+  );
+}

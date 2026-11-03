@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { parseNumber } from "@/features/custom-fields/parse";
 import { readCustomValues } from "@/features/custom-fields/read";
+import { checkAttachment } from "@/features/registers/attachments";
 import { failed, forbidden, formValues, invalid, type ActionState } from "@/lib/form";
 import { dbErrorMessage } from "@/lib/supabase/errors";
 import { createClient } from "@/lib/supabase/server";
@@ -409,6 +410,160 @@ export async function setTaskArchived(
   if (data.length === 0) return forbidden();
   refresh();
   return { ok: true, message: archived ? "Tâche archivée." : "Tâche restaurée." };
+}
+
+// ---------------------------------------------------------------------
+// Dépendances
+// ---------------------------------------------------------------------
+
+/** « La tâche attend la fin de dependsOnId » : par un gestionnaire du planning. La base refuse les boucles. */
+export async function addDependency(
+  brandId: string,
+  taskId: string,
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const scope = await planningScope(brandId);
+  if (!scope?.canManage || !uuid.safeParse(taskId).success) return forbidden();
+  const dependsOnId = formData.get("dependsOnId");
+  const fieldError = (message: string): ActionState => ({
+    ok: false,
+    message: "Vérifiez les champs signalés.",
+    fieldErrors: { dependsOnId: [message] },
+  });
+  if (typeof dependsOnId !== "string" || !uuid.safeParse(dependsOnId).success) return fieldError("Choisissez une tâche.");
+  if (dependsOnId === taskId) return fieldError("Une tâche ne peut pas dépendre d'elle-même.");
+
+  const supabase = await createClient();
+  const { data: target } = await supabase.from("tasks").select("id").eq("id", dependsOnId).eq("brand_id", brandId).maybeSingle();
+  if (!target) return fieldError("Tâche introuvable.");
+  const { error } = await supabase.from("task_dependencies").insert({ brand_id: brandId, task_id: taskId, depends_on_id: dependsOnId });
+  if (error) return error.code === "23505" ? fieldError("Cette dépendance existe déjà.") : failed(error);
+  refresh();
+  return { ok: true, message: "Dépendance ajoutée." };
+}
+
+export async function removeDependency(
+  brandId: string,
+  taskId: string,
+  dependsOnId: string,
+  _previous: ActionState,
+  _formData?: FormData,
+): Promise<ActionState> {
+  const scope = await planningScope(brandId);
+  if (!scope?.canManage || !uuid.safeParse(taskId).success || !uuid.safeParse(dependsOnId).success) return forbidden();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("task_dependencies")
+    .delete()
+    .eq("brand_id", brandId)
+    .eq("task_id", taskId)
+    .eq("depends_on_id", dependsOnId)
+    .select("task_id");
+  if (error) return failed(error);
+  if (data.length === 0) return forbidden();
+  refresh();
+  return { ok: true, message: "Dépendance retirée." };
+}
+
+// ---------------------------------------------------------------------
+// Pièces jointes (bucket privé « attachments », dossier {marque}/taches/{tâche})
+// ---------------------------------------------------------------------
+
+/** Gestionnaire du planning, ou responsable d'une tâche non archivée (comme la RLS). */
+async function authorizeTaskEdit(brandId: string, taskId: string) {
+  const scope = await planningScope(brandId);
+  if (!scope || !uuid.safeParse(taskId).success) return null;
+  const supabase = await createClient();
+  const { data: task } = await supabase
+    .from("tasks")
+    .select("assignee_id, archived_at")
+    .eq("id", taskId)
+    .eq("brand_id", brandId)
+    .maybeSingle();
+  if (!task || task.archived_at || !(scope.canManage || task.assignee_id === scope.ctx.userId)) return null;
+  return { supabase };
+}
+
+export async function uploadTaskAttachment(
+  brandId: string,
+  taskId: string,
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const auth = await authorizeTaskEdit(brandId, taskId);
+  if (!auth) return forbidden();
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) return { ok: false, message: "Choisissez un fichier." };
+  const check = checkAttachment(file);
+  if (!check.ok) return { ok: false, message: check.message };
+
+  const path = `${brandId}/taches/${taskId}/${crypto.randomUUID()}.${check.extension}`;
+  const storage = auth.supabase.storage.from("attachments");
+  const { error: uploadError } = await storage.upload(path, file, { contentType: file.type, upsert: false });
+  if (uploadError) {
+    console.error(uploadError);
+    return { ok: false, message: "L'envoi du fichier a échoué." };
+  }
+
+  const { error } = await auth.supabase.from("task_attachments").insert({
+    brand_id: brandId,
+    task_id: taskId,
+    storage_path: path,
+    file_name: file.name,
+    mime_type: file.type,
+    size_bytes: file.size,
+  });
+  if (error) {
+    await storage.remove([path]);
+    return failed(error);
+  }
+  refresh();
+  return { ok: true, message: `« ${file.name} » ajouté.` };
+}
+
+export async function deleteTaskAttachment(
+  brandId: string,
+  taskId: string,
+  attachmentId: string,
+  _previous: ActionState,
+  _formData?: FormData,
+): Promise<ActionState> {
+  if (!uuid.safeParse(attachmentId).success) return forbidden();
+  const auth = await authorizeTaskEdit(brandId, taskId);
+  if (!auth) return forbidden();
+
+  const { data, error } = await auth.supabase
+    .from("task_attachments")
+    .delete()
+    .eq("id", attachmentId)
+    .eq("task_id", taskId)
+    .select("storage_path");
+  if (error) return failed(error);
+  if (data.length === 0) return forbidden();
+
+  await auth.supabase.storage.from("attachments").remove(data.map((a) => a.storage_path));
+  refresh();
+  return { ok: true, message: "Pièce jointe supprimée." };
+}
+
+/** Lien de téléchargement valable 60 secondes (la RLS vérifie l'accès à la tâche). */
+export async function getTaskAttachmentUrl(attachmentId: string): Promise<{ url: string } | { error: string }> {
+  if (!uuid.safeParse(attachmentId).success) return { error: "Pièce jointe introuvable." };
+  const supabase = await createClient();
+  const { data: attachment } = await supabase
+    .from("task_attachments")
+    .select("storage_path, file_name")
+    .eq("id", attachmentId)
+    .maybeSingle();
+  if (!attachment) return { error: "Pièce jointe introuvable." };
+
+  const { data, error } = await supabase.storage
+    .from("attachments")
+    .createSignedUrl(attachment.storage_path, 60, { download: attachment.file_name });
+  if (error || !data) return { error: "Lien de téléchargement indisponible." };
+  return { url: data.signedUrl };
 }
 
 const commentSchema = z.object({ text: z.string().trim().min(1, "Le commentaire est vide.").max(5000) });

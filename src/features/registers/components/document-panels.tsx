@@ -13,6 +13,8 @@ import { ACCEPT_ATTRIBUTE } from "../attachments";
 import type { DocumentAttachment } from "../queries";
 
 type FormAction = (previous: ActionState, formData: FormData) => Promise<ActionState>;
+type AttachmentItem = Pick<DocumentAttachment, "id" | "fileName" | "sizeBytes" | "createdAt">;
+type GetUrl = (attachmentId: string) => Promise<{ url: string } | { error: string }>;
 
 const textareaClass =
   "min-h-16 w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -64,16 +66,19 @@ export function FollowUpForm({
   );
 }
 
+/** Pièces jointes d'un document ou d'une tâche : `getUrl` fournit le lien de téléchargement. */
 export function AttachmentsPanel({
   attachments,
   uploadAction,
   deleteActions,
   canManage,
+  getUrl = getAttachmentUrl,
 }: {
-  attachments: DocumentAttachment[];
+  attachments: AttachmentItem[];
   uploadAction: FormAction;
   deleteActions: Record<string, FormAction>;
   canManage: boolean;
+  getUrl?: GetUrl;
 }) {
   const [state, formAction, pending] = useActionState(uploadAction, null);
 
@@ -88,6 +93,7 @@ export function AttachmentsPanel({
             key={attachment.id}
             attachment={attachment}
             deleteAction={canManage ? deleteActions[attachment.id] : undefined}
+            getUrl={getUrl}
           />
         ))}
       </ul>
@@ -115,16 +121,18 @@ export function AttachmentsPanel({
 function AttachmentRow({
   attachment,
   deleteAction,
+  getUrl,
 }: {
-  attachment: DocumentAttachment;
+  attachment: AttachmentItem;
   deleteAction?: FormAction;
+  getUrl: GetUrl;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   const download = () =>
     startTransition(async () => {
-      const result = await getAttachmentUrl(attachment.id);
+      const result = await getUrl(attachment.id);
       if ("url" in result) {
         setError(null);
         window.location.assign(result.url);

@@ -1,8 +1,9 @@
 # MAXreport · Planification et BI
 
 > **État** : plan validé le 3 novembre 2026 (Planification d'abord). Sprint 10 en production le
-> 3 novembre 2026 (migration `20261103120950_planification`). Sprint 11 développé sur la branche
-> `sprint-11/vues-planification` (sans migration), en attente de validation.
+> 3 novembre 2026 (migration `20261103120950_planification`), Sprint 11 le même jour (sans migration).
+> Sprint 12 développé sur la branche `sprint-12/gantt-dependances` (migration
+> `20261103133036_planification_dependances`, appliquée sur la base de test), en attente de validation.
 >
 > Proposition du 3 novembre 2026. Deux modules
 > ajoutés à MAXreport, avec les mêmes comptes, marques, rôles et règles de sécurité
@@ -33,7 +34,7 @@ Les **statuts des tâches** se paramètrent par marque dans l'écran *Statuts* e
 | **Kanban** | Une colonne par statut ; on déplace une carte pour changer son statut (glisser-déposer, ou au clavier). |
 | **Calendrier** | Mois ou semaine : échéances des tâches et jalons. |
 | **Gantt** | Tâches en barres sur leurs dates, flèches de dépendance, alerte quand une tâche commence avant la fin de celle dont elle dépend, ou finit après l'échéance de son jalon. |
-| **Charge** | Par collaborateur et par semaine : nombre de tâches et heures estimées. |
+| **Charge** | Par collaborateur et par semaine : heures restantes des tâches à faire, comparées à une capacité hebdomadaire réglable. |
 | **Mes tâches** | Pour chacun, toutes ses tâches, toutes marques confondues : en retard, aujourd'hui, cette semaine. |
 
 ### Droits
@@ -67,6 +68,16 @@ Rôles par défaut : administrateur de marque, responsable commercial et marketi
 - **Kanban** : une colonne par statut (les statuts désactivés n'apparaissent que s'ils portent encore des tâches). Glisser une carte change son statut et son ordre ; au clavier, la liste « Déplacer vers » de chaque carte. L'ordre utilise des positions espacées (`src/features/planning/board.ts`) : en général seule la carte déplacée est réécrite. Sans `planning.manage`, on ne déplace que ses propres tâches, en fin de colonne (jamais les cartes des autres). Affichage immédiat, annulé si la base refuse.
 - **Calendrier** : mois du lundi au dimanche ; échéances des tâches (en retard en rouge, terminées barrées) et jalons (◆) ; filtres responsable et projet ; liste des jours sur mobile.
 - **Feuille de route** : une année par trimestres et mois ; projet = barre (ses dates, à défaut celles de ses jalons) avec son avancement ; jalons ◆ (atteint) ou ◇ ; repère du jour. « Toutes les marques » pour qui lit la planification de plusieurs marques. Projets abandonnés masqués ; projets sans date listés à part.
+
+### Sprint 12 : dépendances, Gantt, charge, pièces jointes
+
+- Migration `planification_dependances` : tables `task_dependencies` et `task_attachments`, événements de chronologie (dépendance ajoutée ou retirée, pièce jointe ajoutée ou supprimée), politiques du stockage privé pour le dossier `{marque}/taches/{tâche}/` ; tests `supabase/tests/rls_sprint12.sql`.
+- **Dépendances** (« B attend la fin de A ») : entre tâches d'une même marque, créées et retirées par `planning.manage`. La base refuse les boucles, même indirectes, sous un verrou par marque (deux ajouts simultanés ne peuvent pas en former une). Le contrôle des droits passe avant la recherche de boucle : un utilisateur sans droit n'apprend rien des dépendances existantes. La fiche tâche ne propose que les tâches qui ne fermeraient pas de boucle.
+- **Fiche tâche** : sections « Attend la fin de » et « Bloque », badge « Bloquée » tant qu'un prédécesseur reste à faire (un prédécesseur annulé ne bloque plus), « Dates incompatibles » quand une tâche commence avant l'échéance de celle qu'elle attend (le même jour est admis), « Après son jalon » quand elle finit après un jalon pas encore atteint.
+- **Pièces jointes des tâches** : mêmes formats et même limite (4 Mo) que pour les offres, bucket privé, liens de téléchargement valables 60 secondes. Ajout et suppression par `planning.manage` ou par le responsable de la tâche (tâche non archivée) ; lecture avec `planning.read`.
+- **Gantt** (onglet des tâches) : trois mois, un groupe par projet avec ses jalons, barres du début à l'échéance (avancement en couleur), traits de dépendance (rouges en cas de conflit), repère du jour ; filtres responsable et projet ; défilement horizontal sur mobile, titres fixes. Encadré d'alertes : dates incompatibles, tâches après leur jalon, tâches qui devaient commencer mais attendent encore.
+- **Charge** (onglet des tâches) : huit semaines à partir de la semaine en cours. Heures restantes = estimation × part non réalisée, réparties sur les jours ouvrés de la tâche à partir d'aujourd'hui ; une tâche en retard pèse sur aujourd'hui. Capacité de référence réglable (40 h par défaut) : orange à 80 %, rouge au-delà. Colonnes « Sans date » (heures non placées) et « Sans estimation » (tâches non comptées). Aucune donnée inventée : sans estimation, rien n'est compté.
+- Règles testées : `src/features/planning/schedule.ts` (boucles, blocage, conflits, semaines ISO, charge) et `gantt.ts` (fenêtre, barres, repères, traits).
 
 ## 2. BI : graphiques et tableaux de bord
 

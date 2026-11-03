@@ -2360,6 +2360,89 @@ export type Database = {
           },
         ]
       }
+      task_attachments: {
+        Row: {
+          brand_id: string
+          created_at: string
+          file_name: string
+          id: string
+          mime_type: string
+          size_bytes: number
+          storage_path: string
+          task_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          file_name: string
+          id?: string
+          mime_type: string
+          size_bytes: number
+          storage_path: string
+          task_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          file_name?: string
+          id?: string
+          mime_type?: string
+          size_bytes?: number
+          storage_path?: string
+          task_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_attachments_brand_id_task_id_fkey"
+            columns: ["brand_id", "task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["brand_id", "id"]
+          },
+        ]
+      }
+      task_dependencies: {
+        Row: {
+          brand_id: string
+          created_at: string
+          created_by: string | null
+          depends_on_id: string
+          task_id: string
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          created_by?: string | null
+          depends_on_id: string
+          task_id: string
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          created_by?: string | null
+          depends_on_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_dependencies_brand_id_depends_on_id_fkey"
+            columns: ["brand_id", "depends_on_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "task_dependencies_brand_id_task_id_fkey"
+            columns: ["brand_id", "task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["brand_id", "id"]
+          },
+        ]
+      }
       task_events: {
         Row: {
           actor_id: string | null
