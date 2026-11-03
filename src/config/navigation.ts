@@ -51,9 +51,9 @@ export const brandNavigation: NavGroup[] = [
   {
     label: "Marketing",
     items: [
-      { title: "Réseaux sociaux", icon: Share2, module: "social" },
-      { title: "Campagnes", icon: Megaphone, module: "campaigns" },
-      { title: "Sites web", icon: Globe, module: "websites" },
+      { title: "Réseaux sociaux", icon: Share2, module: "social", path: "/reseaux-sociaux", permission: ["marketing.read", "marketing.manage"] },
+      { title: "Campagnes", icon: Megaphone, module: "campaigns", path: "/campagnes", permission: ["marketing.read", "marketing.manage"] },
+      { title: "Sites web", icon: Globe, module: "websites", path: "/sites-web", permission: ["marketing.read", "marketing.manage"] },
     ],
   },
   {

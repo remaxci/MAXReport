@@ -33,6 +33,8 @@ export const PERMISSIONS = [
   "activities.validate",
   "objectives.read_all",
   "objectives.manage",
+  "marketing.read",
+  "marketing.manage",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

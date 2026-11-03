@@ -8,6 +8,7 @@ import {
   parsePeriodKind,
   periodLabel,
   periodRange,
+  sameLastYear,
   shiftPeriod,
 } from "./periods";
 
@@ -68,6 +69,16 @@ describe("shiftPeriod", () => {
     expect(shiftPeriod(periodRange("month", "2026-12-15"), 1)).toEqual({ kind: "month", start: "2027-01-01", end: "2027-01-31" });
     expect(shiftPeriod(periodRange("quarter", "2026-02-01"), -1)).toEqual({ kind: "quarter", start: "2025-10-01", end: "2025-12-31" });
     expect(shiftPeriod(periodRange("year", "2026-06-01"), 1).start).toBe("2027-01-01");
+  });
+});
+
+describe("sameLastYear", () => {
+  it("compare à la même période de l'année précédente", () => {
+    expect(sameLastYear(periodRange("month", "2026-11-17"))).toEqual({ kind: "month", start: "2025-11-01", end: "2025-11-30" });
+    expect(sameLastYear(periodRange("quarter", "2026-11-17")).start).toBe("2025-10-01");
+    expect(sameLastYear(periodRange("year", "2026-11-17")).start).toBe("2025-01-01");
+    // Semaine : 52 semaines plus tôt, toujours un lundi.
+    expect(sameLastYear(periodRange("week", "2026-11-02"))).toEqual({ kind: "week", start: "2025-11-03", end: "2025-11-09" });
   });
 });
 

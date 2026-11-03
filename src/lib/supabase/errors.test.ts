@@ -47,6 +47,15 @@ describe("dbErrorMessage", () => {
     ).toBe("Cet élément est encore utilisé ailleurs et ne peut pas être supprimé.");
   });
 
+  it("explique un relevé qui chevauche une période déjà saisie", () => {
+    expect(
+      dbErrorMessage({
+        code: "23P01",
+        message: 'conflicting key value violates exclusion constraint "social_snapshots_no_overlap"',
+      }),
+    ).toMatch(/^Un relevé existe déjà/);
+  });
+
   it("ne divulgue pas les erreurs inconnues", () => {
     expect(dbErrorMessage({ code: "XX000", message: "internal error at ..." })).toBe(
       "Une erreur est survenue. Réessayez.",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, formatBytes, formatDate, formatMoney, formatNumber, formatPercent, todayIso } from "./format";
+import { addDays, formatBytes, formatDate, formatMoney, formatEvolution, formatNumber, formatPercent, todayIso } from "./format";
 
 // Intl insère des espaces insécables : on les normalise pour comparer.
 const plain = (value: string) => value.replace(/[  ]/g, " ");
@@ -50,5 +50,12 @@ describe("formatNumber et formatPercent", () => {
   it("n'affiche jamais 0 pour une valeur absente", () => {
     expect(formatNumber(null)).toBe("—");
     expect(formatPercent(null)).toBe("n/d");
+    expect(formatEvolution(null)).toBe("n/d");
+  });
+
+  it("garde les décimales demandées et signe les évolutions", () => {
+    expect(plain(formatPercent(2.345, 1))).toBe("2,3 %");
+    expect(plain(formatEvolution(12))).toBe("+12 %");
+    expect(plain(formatEvolution(-3.5))).toBe("−3,5 %");
   });
 });

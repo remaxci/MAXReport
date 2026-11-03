@@ -28,6 +28,8 @@ export function dbErrorMessage(error: DbError): string {
       return message.includes("violates check constraint") ? "Valeur invalide." : message;
     case "23503":
       return "Cet élément est encore utilisé ailleurs et ne peut pas être supprimé.";
+    case "23P01":
+      return "Un relevé existe déjà sur tout ou partie de cette période : modifiez-le plutôt que d'en saisir un second.";
     case "P0001":
     case "P0002":
       return message;

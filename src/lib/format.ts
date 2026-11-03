@@ -54,7 +54,7 @@ export function formatBytes(bytes: number): string {
 }
 
 const NUMBER = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 });
-const PERCENT = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
+const PERCENT = [0, 1, 2].map((digits) => new Intl.NumberFormat("fr-FR", { maximumFractionDigits: digits }));
 
 /** Nombre en français ; une valeur absente s'affiche « — », jamais 0. */
 export function formatNumber(value: number | null): string {
@@ -62,6 +62,13 @@ export function formatNumber(value: number | null): string {
 }
 
 /** Pourcentage déjà multiplié par 100 (ex. 87.5 → « 88 % ») ; absent → « n/d ». */
-export function formatPercent(value: number | null): string {
-  return value === null ? "n/d" : `${PERCENT.format(value)} %`;
+export function formatPercent(value: number | null, digits: 0 | 1 | 2 = 0): string {
+  return value === null ? "n/d" : `${PERCENT[digits].format(value)} %`;
+}
+
+/** Évolution signée : « +12 % », « −3,5 % » ; absente → « n/d ». */
+export function formatEvolution(value: number | null): string {
+  if (value === null) return "n/d";
+  const sign = value > 0 ? "+" : value < 0 ? "−" : "";
+  return `${sign}${formatPercent(Math.abs(value), 1)}`;
 }

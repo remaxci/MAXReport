@@ -1358,6 +1358,437 @@ export type Database = {
           },
         ]
       }
+      platforms: {
+        Row: {
+          is_active: boolean
+          key: string
+          kind: string
+          label: string
+          position: number
+        }
+        Insert: {
+          is_active?: boolean
+          key: string
+          kind: string
+          label: string
+          position?: number
+        }
+        Update: {
+          is_active?: boolean
+          key?: string
+          kind?: string
+          label?: string
+          position?: number
+        }
+        Relationships: []
+      }
+      social_accounts: {
+        Row: {
+          archived_at: string | null
+          brand_id: string
+          created_at: string
+          created_by: string | null
+          handle: string | null
+          id: string
+          name: string
+          platform: string
+          updated_at: string
+          updated_by: string | null
+          url: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          brand_id: string
+          created_at?: string
+          created_by?: string | null
+          handle?: string | null
+          id?: string
+          name: string
+          platform: string
+          updated_at?: string
+          updated_by?: string | null
+          url?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          brand_id?: string
+          created_at?: string
+          created_by?: string | null
+          handle?: string | null
+          id?: string
+          name?: string
+          platform?: string
+          updated_at?: string
+          updated_by?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_accounts_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_accounts_platform_fkey"
+            columns: ["platform"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      social_snapshots: {
+        Row: {
+          account_id: string
+          brand_id: string
+          clicks: number | null
+          comments: string | null
+          created_at: string
+          created_by: string | null
+          followers_new: number | null
+          followers_total: number | null
+          id: string
+          impressions: number | null
+          interactions: number | null
+          period_end: string
+          period_start: string
+          posts: number | null
+          reach: number | null
+          source: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          brand_id: string
+          clicks?: number | null
+          comments?: string | null
+          created_at?: string
+          created_by?: string | null
+          followers_new?: number | null
+          followers_total?: number | null
+          id?: string
+          impressions?: number | null
+          interactions?: number | null
+          period_end: string
+          period_start: string
+          posts?: number | null
+          reach?: number | null
+          source?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          brand_id?: string
+          clicks?: number | null
+          comments?: string | null
+          created_at?: string
+          created_by?: string | null
+          followers_new?: number | null
+          followers_total?: number | null
+          id?: string
+          impressions?: number | null
+          interactions?: number | null
+          period_end?: string
+          period_start?: string
+          posts?: number | null
+          reach?: number | null
+          source?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_snapshots_brand_id_account_id_fkey"
+            columns: ["brand_id", "account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
+            referencedColumns: ["brand_id", "id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          archived_at: string | null
+          brand_id: string
+          comments: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          custom: Json
+          end_on: string | null
+          external_id: string | null
+          id: string
+          name: string
+          objective: string
+          planned_budget: number | null
+          platform: string
+          start_on: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          brand_id: string
+          comments?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          custom?: Json
+          end_on?: string | null
+          external_id?: string | null
+          id?: string
+          name: string
+          objective?: string
+          planned_budget?: number | null
+          platform: string
+          start_on?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          brand_id?: string
+          comments?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          custom?: Json
+          end_on?: string | null
+          external_id?: string | null
+          id?: string
+          name?: string
+          objective?: string
+          planned_budget?: number | null
+          platform?: string
+          start_on?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_platform_fkey"
+            columns: ["platform"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      campaign_snapshots: {
+        Row: {
+          brand_id: string
+          campaign_id: string
+          clicks: number | null
+          comments: string | null
+          conversion_value: number | null
+          conversions: number | null
+          created_at: string
+          created_by: string | null
+          id: string
+          impressions: number | null
+          leads: number | null
+          period_end: string
+          period_start: string
+          reach: number | null
+          source: string
+          spend: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          brand_id: string
+          campaign_id: string
+          clicks?: number | null
+          comments?: string | null
+          conversion_value?: number | null
+          conversions?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          impressions?: number | null
+          leads?: number | null
+          period_end: string
+          period_start: string
+          reach?: number | null
+          source?: string
+          spend?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          brand_id?: string
+          campaign_id?: string
+          clicks?: number | null
+          comments?: string | null
+          conversion_value?: number | null
+          conversions?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          impressions?: number | null
+          leads?: number | null
+          period_end?: string
+          period_start?: string
+          reach?: number | null
+          source?: string
+          spend?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_snapshots_brand_id_campaign_id_fkey"
+            columns: ["brand_id", "campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["brand_id", "id"]
+          },
+        ]
+      }
+      websites: {
+        Row: {
+          archived_at: string | null
+          brand_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          updated_at: string
+          updated_by: string | null
+          url: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          brand_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          updated_by?: string | null
+          url?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          brand_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          updated_by?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "websites_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      website_snapshots: {
+        Row: {
+          brand_id: string
+          comments: string | null
+          conversions: number | null
+          created_at: string
+          created_by: string | null
+          form_submissions: number | null
+          id: string
+          page_views: number | null
+          period_end: string
+          period_start: string
+          sessions: number | null
+          sessions_direct: number | null
+          sessions_email: number | null
+          sessions_organic: number | null
+          sessions_other: number | null
+          sessions_paid: number | null
+          sessions_referral: number | null
+          sessions_social: number | null
+          source: string
+          updated_at: string
+          updated_by: string | null
+          users: number | null
+          website_id: string
+        }
+        Insert: {
+          brand_id: string
+          comments?: string | null
+          conversions?: number | null
+          created_at?: string
+          created_by?: string | null
+          form_submissions?: number | null
+          id?: string
+          page_views?: number | null
+          period_end: string
+          period_start: string
+          sessions?: number | null
+          sessions_direct?: number | null
+          sessions_email?: number | null
+          sessions_organic?: number | null
+          sessions_other?: number | null
+          sessions_paid?: number | null
+          sessions_referral?: number | null
+          sessions_social?: number | null
+          source?: string
+          updated_at?: string
+          updated_by?: string | null
+          users?: number | null
+          website_id: string
+        }
+        Update: {
+          brand_id?: string
+          comments?: string | null
+          conversions?: number | null
+          created_at?: string
+          created_by?: string | null
+          form_submissions?: number | null
+          id?: string
+          page_views?: number | null
+          period_end?: string
+          period_start?: string
+          sessions?: number | null
+          sessions_direct?: number | null
+          sessions_email?: number | null
+          sessions_organic?: number | null
+          sessions_other?: number | null
+          sessions_paid?: number | null
+          sessions_referral?: number | null
+          sessions_social?: number | null
+          source?: string
+          updated_at?: string
+          updated_by?: string | null
+          users?: number | null
+          website_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_snapshots_brand_id_website_id_fkey"
+            columns: ["brand_id", "website_id"]
+            isOneToOne: false
+            referencedRelation: "websites"
+            referencedColumns: ["brand_id", "id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

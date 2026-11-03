@@ -268,15 +268,15 @@ Le `(select …)` fait évaluer la fonction une seule fois par requête, pas à 
 
 | Table | Colonnes principales |
 |---|---|
-| `platforms` | key, label, kind (`social`, `ads`, `web`), is_active. Liste commune et extensible |
-| `social_accounts` | platform_id, name, handle, url, is_active |
-| `social_snapshots` | account_id, period_start, period_end, followers_total, followers_new, reach, impressions, posts, interactions, clicks, source |
-| `campaigns` | platform_id, name, objective, start_on, end_on, planned_budget, currency, budget_line_id, status, external_id, custom |
-| `campaign_snapshots` | campaign_id, period_start, period_end, spend, currency, impressions, reach, clicks, leads, conversions, conversion_value, source |
-| `websites` | name, url, ga4_property_id, search_console_url (vides tant qu'aucune connexion n'existe) |
-| `website_snapshots` | website_id, period_start, period_end, users, sessions, page_views, conversions, form_submissions, source |
-| `website_traffic_sources` | snapshot_id, channel (organique, direct, réseaux sociaux, payant, référent, e-mail, autre), sessions, users, conversions |
-| `website_goals` | website_id, name, metric_key, target_value |
+| `platforms` | key (clé primaire), label, kind (`social`, `ads`, `offline`), position, is_active. Liste commune, alimentée par migration, en lecture seule pour les utilisateurs |
+| `social_accounts` | platform (plateforme `social`), name, handle, url, archived_at |
+| `social_snapshots` | account_id, period_start, period_end, followers_total, followers_new, reach, impressions, posts, interactions, clicks, source (`manual`, `import`), comments |
+| `campaigns` | platform (plateforme `ads` ou `offline`), name, objective, status, start_on, end_on, planned_budget, currency, external_id, comments, custom, archived_at. La ligne budgétaire arrive au Sprint 7 |
+| `campaign_snapshots` | campaign_id, period_start, period_end, spend, impressions, reach, clicks, leads, conversions, conversion_value, source, comments. Montants dans la devise de la campagne, qui se fige au premier relevé |
+| `websites` | name, url, archived_at |
+| `website_snapshots` | website_id, period_start, period_end, users, sessions, page_views, conversions, form_submissions, sessions par canal (`sessions_organic`, `_direct`, `_social`, `_paid`, `_referral`, `_email`, `_other`, dont la somme ne dépasse pas `sessions`), source, comments |
+
+Chaque relevé porte au moins une mesure ; une mesure non saisie reste vide. Les objectifs de site (`website_goals`) rejoindront le catalogue d'indicateurs des objectifs au Sprint 8.
 
 Une **contrainte d'exclusion** (`btree_gist`) interdit deux relevés dont les périodes se chevauchent pour un même compte, une même campagne ou un même site. Deux imports de la même semaine ne peuvent donc pas s'additionner.
 
@@ -428,7 +428,7 @@ Les fonctions d'agrégation sont les mêmes que pour une marque, appliquées à 
 
 Un sprint est un lot livrable et vérifiable, développé sur sa propre branche avec une URL Preview Vercel.
 
-**Avancement :** Sprints 0 à 4 livrés sur leurs branches (base de dev, Preview Vercel). Rien n'est encore en production. Le Sprint 4 a été découpé : 4a (prospects, contacts, échanges, opportunités, contrats) puis 4b (fiches d'activité hebdomadaire, vues du responsable, objectifs).
+**Avancement :** Sprints 0 à 5 livrés sur leurs branches (base de dev, Preview Vercel). Rien n'est encore en production. Le Sprint 4 a été découpé : 4a (prospects, contacts, échanges, opportunités, contrats) puis 4b (fiches d'activité hebdomadaire, vues du responsable, objectifs).
 
 **Décision Sprint 4a :** l'annuaire des prospects est partagé au sein d'une marque (permission `crm.read`) pour éviter les doublons d'entreprises ; les opportunités, offres, mémos et contrats restent personnels pour les commerciaux (`*.manage_own`).
 
@@ -439,6 +439,15 @@ Un sprint est un lot livrable et vérifiable, développé sur sa propre branche 
 - Sans `objectives.read_all` ni `activities.read_all`, un commercial voit son réalisé et le total de l'équipe, jamais le détail de ses collègues (lignes regroupées par `metric_actuals`).
 - Un indicateur tiré des fiches est « inconnu » (et non 0) tant qu'aucune fiche n'est soumise ; un registre sans enregistrement vaut 0.
 - Un objectif n'est accepté que sur un indicateur mesurable pour la marque (les offres et contrats exigent leur module).
+
+**Règles Sprint 5 :**
+- Permissions `marketing.read` (Direction, Lecture, Responsable commercial) et `marketing.manage` (Marketing, Administrateur de marque) ; les commerciaux n'y ont pas accès.
+- Aucune connexion aux API des plateformes : les relevés sont saisis (imports au Sprint 6).
+- Sur une période, seuls les relevés entièrement compris comptent ; un relevé à cheval sur une borne est signalé, jamais réparti au prorata.
+- Abonnés : dernière valeur connue ; portée et utilisateurs uniques : seulement pour la période exacte d'un relevé, sinon « n/d » ; le taux d'engagement passe alors sur les impressions, et c'est affiché.
+- Évolutions comparées à la période précédente et à la même période de l'année précédente (semaine : 52 semaines plus tôt).
+- Total des dépenses de campagnes converti dans la devise de la marque (parité XOF/EUR) ; les montants en USD sont exclus et signalés tant que les taux ne sont pas saisis.
+- Comptes, campagnes et sites s'archivent ; seul un relevé erroné se supprime, avec trace dans le journal d'audit.
 
 | Sprint | Contenu | Taille |
 |---|---|---|

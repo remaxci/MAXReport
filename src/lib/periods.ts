@@ -96,6 +96,16 @@ export function shiftPeriod(period: Period, delta: number): Period {
   }
 }
 
+/**
+ * Même période l'année précédente : la même semaine ISO 52 semaines plus tôt
+ * (même jour de la semaine), ou le même mois, trimestre, année.
+ */
+export function sameLastYear(period: Period): Period {
+  if (period.kind === "week") return periodRange("week", addDays(period.start, -364));
+  const d = toDate(period.start);
+  return periodRange(period.kind, utc(d.getUTCFullYear() - 1, d.getUTCMonth(), 1));
+}
+
 const MONTH_YEAR = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric", timeZone: "UTC" });
 const DAY_MONTH = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" });
 
