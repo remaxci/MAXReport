@@ -30,8 +30,10 @@ function format(column: Pick<ChartColumn, "format" | "currency">, value: unknown
 /** Hauteur d'un graphique horizontal : une rangée par catégorie, axe compris. */
 const hbarHeight = (rows: number) => Math.max(120, rows * 36 + 40);
 
+const seriesColor = (color: number | "muted") => (color === "muted" ? "var(--muted-foreground)" : `var(--chart-${color})`);
+
 export function ChartView({ chart }: { chart: Chart }) {
-  const config: ChartConfig = Object.fromEntries(chart.series.map((s) => [s.key, { label: s.label, color: `var(--chart-${s.color})` }]));
+  const config: ChartConfig = Object.fromEntries(chart.series.map((s) => [s.key, { label: s.label, color: seriesColor(s.color) }]));
   const data = chart.rows.map((row) => ({ label: row.label, title: row.title ?? row.label, ...row.values }));
   const empty = !chart.rows.some((row) => chart.series.some((s) => row.values[s.key] !== null && row.values[s.key] !== undefined));
   const legend = chart.series.length > 1;

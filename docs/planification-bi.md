@@ -3,7 +3,9 @@
 > **État** : plan validé le 3 novembre 2026 (Planification d'abord). Sprint 10 en production le
 > 3 novembre 2026 (migration `20261103120950_planification`), Sprint 11 le même jour (sans migration).
 > Sprint 12 en production le 3 novembre 2026 (migration `20261103133036_planification_dependances`).
-> Sprint 13 (graphiques BI) développé sur la branche `sprint-13/graphiques-bi` (sans migration), en attente de validation.
+> Sprint 13 (graphiques BI) en production le 3 novembre 2026 (sans migration). Sprint 14 (explorateur et
+> tableaux de bord personnalisés) développé sur la branche `sprint-14/explorateur` (migration
+> `20261103163000_tableaux_personnalises`, appliquée sur la base de test), en attente de validation.
 >
 > Proposition du 3 novembre 2026. Deux modules
 > ajoutés à MAXreport, avec les mêmes comptes, marques, rôles et règles de sécurité
@@ -109,6 +111,12 @@ Un graphique ne montre jamais plus que ce que son lecteur peut déjà consulter 
 - **Vue Direction** : CA signé par marque avec la part de chacune (tableau), CA consolidé empilé par marque (au-delà de huit marques, « Autres marques »).
 - Les graphiques se chargent à part : les indicateurs s'affichent sans les attendre. Les lectures partagées (taux de change, date de bascule, historique) sont faites une fois par page.
 - Règles testées : `series.test.ts` (périodes, libellés, sommes et parts sans 0 inventé) et `chart-data.test.ts` (entonnoir, devises sans taux, canaux relevés).
+
+### Sprint 14 : explorateur et tableaux de bord personnalisés
+
+- **Explorateur** (menu Pilotage) : un indicateur, une à huit marques, un découpage (semaine, mois, trimestre), 6, 12 ou 24 périodes jusqu'à une date, une comparaison (période précédente ou année précédente, pour une seule marque) et un graphique (courbe, barres, barres empilées entre marques). Résultat en graphique, en tableau (total entre marques, évolution) et en Excel. Indicateurs : ceux des tableaux de bord qui s'additionnent (réalisés commerciaux, mesures des relevés en flux ou en stock, sessions par canal) ; les valeurs non additives (portée, utilisateurs uniques) n'y figurent pas. Montants dans la devise de la marque, en XOF dès deux marques. Une marque où l'indicateur n'est pas suivi ou pas ouvert est écartée et signalée.
+- **Tableaux personnalisés** : migration `tableaux_personnalises`, table `custom_dashboards`. Un tableau appartient à une marque, ou à la Direction (toutes marques). Il ne contient que des réglages : au plus douze graphiques, validés par l'application et contrôlés par la base (une liste d'objets, taille bornée). Chaque graphique est recalculé à l'ouverture, sous les droits du lecteur. Lecture : `brand.read` (Direction : `direction.read`) ; création et modification : `reports.manage` (Direction : `direction.read`). Un tableau personnel n'est visible et modifiable que par son auteur, et personne d'autre ne peut rendre personnel le tableau d'un autre. Un tableau de marque ne reçoit que des graphiques de sa marque. Suppression confirmée ; journal d'audit. Tests `supabase/tests/rls_sprint14.sql`.
+- Règles testées : `settings.test.ts` (catalogue, adresse ↔ réglages, comparaison et empilement, périodes, format des graphiques enregistrés) et `dashboards.test.ts` (droits, graphiques acceptés, ordre).
 
 ## 3. Découpage en sprints
 

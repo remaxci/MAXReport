@@ -2,7 +2,7 @@ import { evaluateBudget, loadBudgetData } from "@/features/budgets/evaluate";
 import { listBudgets } from "@/features/budgets/queries";
 import { sumInCurrency } from "@/features/crm/money";
 import { getFxRates } from "@/features/fx/queries";
-import { WEBSITE_CHANNELS } from "@/features/marketing/config";
+import { WEBSITE_CHANNELS, type MarketingKind } from "@/features/marketing/config";
 import { listCampaigns, listSnapshots } from "@/features/marketing/queries";
 import { evaluateObjectives } from "@/features/objectives/evaluate";
 import { listObjectives } from "@/features/objectives/queries";
@@ -184,6 +184,41 @@ async function objectiveCharts(c: Ctx): Promise<Chart[]> {
 // ---------------------------------------------------------------------
 
 const STRADDLING_NOTE = "Des relevés couvrent plusieurs points du graphique : ils ne sont pas comptés (choisissez un découpage plus large).";
+
+/**
+ * Une mesure des relevés (comptes, campagnes ou sites) sur chaque période : total
+ * de la marque, montants convertis dans la devise cible à la fin de chaque
+ * période (sans taux : exclus et comptés).
+ */
+export async function snapshotSeries(
+  input: { brand: BrandSummary; periods: readonly Period[]; currency: Currency; rates: readonly FxRate[] },
+  kind: MarketingKind,
+  field: string,
+  money: boolean,
+): Promise<{ values: (number | null)[]; excluded: number; straddling: boolean; notes: string[] }> {
+  const { brand, periods } = input;
+  const [snapshots, campaigns] = await Promise.all([
+    listSnapshots(kind, brand.id, { from: periods[0].start, to: periods[periods.length - 1].end }),
+    money && kind === "campaign" ? Promise.all([listCampaigns(brand.id, false), listCampaigns(brand.id, true)]) : Promise.resolve(null),
+  ]);
+  const currencies = new Map((campaigns?.flat() ?? []).map((x) => [x.id, x.currency]));
+  const totals = periods.map((p) => snapshotTotals(snapshots, kind, p));
+  let excluded = 0;
+  const values = totals.map((t, i) => {
+    if (!money || t.sum(field) === null) return t.sum(field);
+    const sum = sumInCurrency(
+      t.aggregated.map((a) => ({ amount: a.values[field], currency: currencies.get(a.parentId) ?? null })),
+      input.currency,
+      periods[i].end,
+      input.rates,
+    );
+    excluded += sum.excluded;
+    return sum.total;
+  });
+  const straddling = totals.some((t) => t.straddling > 0);
+  const notes = [...(straddling ? [STRADDLING_NOTE] : []), ...(excluded > 0 ? [`${excluded} montant(s) exclus faute de taux de change.`] : [])];
+  return { values, excluded, straddling, notes };
+}
 
 async function socialCharts(c: Ctx): Promise<Chart[]> {
   const snapshots = await listSnapshots("social", c.brand.id, { from: c.periods[0].start, to: c.period.end });
