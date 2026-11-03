@@ -18,7 +18,7 @@ import { StatusBadge } from "@/features/registers/components/status-badge";
 import { getCompanyOptions, getMemberOptions } from "@/features/registers/queries";
 import { ActionButton, EditDetails } from "@/features/settings/components/controls";
 import { formatDate, todayIso } from "@/lib/format";
-import { findBrand, getAuthContext, type BrandSummary } from "@/server/authz/context";
+import { getAuthContext, type BrandSummary } from "@/server/authz/context";
 import { can, type Access, type Permission } from "@/server/authz/permissions";
 import {
   addTaskComment,
@@ -41,7 +41,8 @@ import {
   type ProjectDefaults,
   type TaskDefaults,
 } from "./components/forms";
-import { DueDate, PriorityBadge, ProgressBar, TaskTimeline } from "./components/view";
+import { DueDate, PriorityBadge, ProgressBar, TaskTimeline, TaskViewTabs } from "./components/view";
+import { loadPlanningBrand, memberOptions } from "./load";
 import {
   getDocumentOptions,
   getProject,
@@ -64,13 +65,6 @@ type ParamsWithId = Promise<{ brand: string; id: string }>;
 type Search = Promise<Record<string, string | string[] | undefined>>;
 type Query = Record<string, string | string[] | undefined>;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-
-async function loadBrand(slug: string) {
-  const ctx = await getAuthContext();
-  const brand = findBrand(ctx, slug);
-  if (!brand || !brand.enabledModules.includes("planning")) notFound();
-  return { ctx, brand, canRead: can(ctx.access, "planning.read", brand.id), canManage: can(ctx.access, "planning.manage", brand.id) };
-}
 
 function first(value: string | string[] | undefined): string {
   return typeof value === "string" ? value : "";
@@ -97,7 +91,7 @@ export function ProjectsPage({ params, searchParams }: { params: Params; searchP
 }
 
 async function Projects({ slug, archived }: { slug: string; archived: boolean }) {
-  const { brand, canRead, canManage } = await loadBrand(slug);
+  const { brand, canRead, canManage } = await loadPlanningBrand(slug);
   if (!canRead) return <Forbidden />;
   const today = todayIso();
   const [projects, tasks, statuses, members] = await Promise.all([
@@ -194,10 +188,6 @@ function projectDefaults(p: ProjectRow | null, userId: string): ProjectDefaults 
   };
 }
 
-async function memberOptions(brandId: string) {
-  return (await getMemberOptions(brandId)).map((m) => ({ id: m.id, label: m.label }));
-}
-
 export function NewProjectPage({ params }: { params: Params }) {
   return (
     <Suspense fallback={<PageSkeleton />}>
@@ -209,7 +199,7 @@ export function NewProjectPage({ params }: { params: Params }) {
 }
 
 async function NewProject({ slug }: { slug: string }) {
-  const { ctx, brand, canManage } = await loadBrand(slug);
+  const { ctx, brand, canManage } = await loadPlanningBrand(slug);
   if (!canManage) return <Forbidden />;
   const [members, fields] = await Promise.all([memberOptions(brand.id), getCustomFields(brand.id, "project")]);
   return (
@@ -243,7 +233,7 @@ export function ProjectDetailPage({ params }: { params: ParamsWithId }) {
 }
 
 async function ProjectDetail({ slug, id }: { slug: string; id: string }) {
-  const { ctx, brand, canRead, canManage } = await loadBrand(slug);
+  const { ctx, brand, canRead, canManage } = await loadPlanningBrand(slug);
   if (!canRead) return <Forbidden />;
   if (!UUID.test(id)) notFound();
   const project = await getProject(brand.id, id);
@@ -454,7 +444,7 @@ export function TasksPage({ params, searchParams }: { params: Params; searchPara
 }
 
 async function Tasks({ slug, query }: { slug: string; query: Query }) {
-  const { brand, canRead, canManage } = await loadBrand(slug);
+  const { brand, canRead, canManage } = await loadPlanningBrand(slug);
   if (!canRead) return <Forbidden />;
   const filters = parseTaskFilters(query);
   const today = todayIso();
@@ -481,6 +471,7 @@ async function Tasks({ slug, query }: { slug: string; query: Query }) {
           </Button>
         )}
       </PageHeader>
+      <TaskViewTabs base={base} current="liste" />
       <Form action={action} className="grid gap-3 rounded-xl border p-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="flex flex-col gap-1.5 lg:col-span-2">
           <Label htmlFor="filtre-q">Recherche</Label>
@@ -633,7 +624,7 @@ export function NewTaskPage({ params, searchParams }: { params: Params; searchPa
 }
 
 async function NewTask({ slug, projectId, parentId }: { slug: string; projectId: string; parentId: string }) {
-  const { ctx, brand, canManage } = await loadBrand(slug);
+  const { ctx, brand, canManage } = await loadPlanningBrand(slug);
   if (!canManage) return <Forbidden />;
   const data = await taskFormData(brand, ctx.access);
   const parent = data.parents.find((p) => p.id === parentId);
@@ -679,7 +670,7 @@ export function TaskDetailPage({ params }: { params: ParamsWithId }) {
 }
 
 async function TaskDetail({ slug, id }: { slug: string; id: string }) {
-  const { ctx, brand, canRead, canManage } = await loadBrand(slug);
+  const { ctx, brand, canRead, canManage } = await loadPlanningBrand(slug);
   if (!canRead) return <Forbidden />;
   if (!UUID.test(id)) notFound();
   const task = await getTask(brand.id, id);

@@ -4,6 +4,7 @@ import {
   CalendarCheck,
   Coins,
   ChartColumn,
+  ChartGantt,
   ChartNoAxesCombined,
   FileText,
   FolderKanban,
@@ -105,6 +106,7 @@ export const brandNavigation: NavGroup[] = [
     items: [
       { title: "Projets", icon: FolderKanban, module: "planning", path: "/projets", permission: "planning.read" },
       { title: "Tâches", icon: ListChecks, module: "planning", path: "/taches", permission: "planning.read" },
+      { title: "Feuille de route", icon: ChartGantt, module: "planning", path: "/feuille-de-route", permission: "planning.read" },
     ],
   },
   {

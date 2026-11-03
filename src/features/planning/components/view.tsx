@@ -1,7 +1,36 @@
+import { CalendarDays, List, SquareKanban } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { PRIORITY_LABELS, TASK_FIELD_LABELS, type Priority } from "../config";
 import type { TaskEvent } from "../queries";
+
+const TASK_VIEWS = [
+  { key: "liste", label: "Liste", path: "/taches", icon: List },
+  { key: "kanban", label: "Kanban", path: "/taches/kanban", icon: SquareKanban },
+  { key: "calendrier", label: "Calendrier", path: "/taches/calendrier", icon: CalendarDays },
+] as const;
+
+/** Passage d'une vue des tâches à l'autre (les filtres sont propres à chaque vue). */
+export function TaskViewTabs({ base, current }: { base: string; current: (typeof TASK_VIEWS)[number]["key"] }) {
+  return (
+    <nav aria-label="Vues des tâches" className="flex w-fit gap-1 rounded-lg bg-muted p-1">
+      {TASK_VIEWS.map((view) => (
+        <Link
+          key={view.key}
+          href={`${base}${view.path}`}
+          aria-current={view.key === current ? "page" : undefined}
+          className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm ${
+            view.key === current ? "bg-background font-medium shadow-sm" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <view.icon className="size-4" />
+          {view.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
 
 export function PriorityBadge({ priority }: { priority: Priority }) {
   if (priority === "normal") return null;
