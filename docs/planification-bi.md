@@ -2,8 +2,8 @@
 
 > **État** : plan validé le 3 novembre 2026 (Planification d'abord). Sprint 10 en production le
 > 3 novembre 2026 (migration `20261103120950_planification`), Sprint 11 le même jour (sans migration).
-> Sprint 12 développé sur la branche `sprint-12/gantt-dependances` (migration
-> `20261103133036_planification_dependances`, appliquée sur la base de test), en attente de validation.
+> Sprint 12 en production le 3 novembre 2026 (migration `20261103133036_planification_dependances`).
+> Sprint 13 (graphiques BI) développé sur la branche `sprint-13/graphiques-bi` (sans migration), en attente de validation.
 >
 > Proposition du 3 novembre 2026. Deux modules
 > ajoutés à MAXreport, avec les mêmes comptes, marques, rôles et règles de sécurité
@@ -100,6 +100,15 @@ Bibliothèque : composant *Chart* de shadcn/ui (Recharts), aux couleurs de l'app
 | **Tableaux de bord personnalisés** | Composés de graphiques de l'explorateur, enregistrés par marque (ou toutes marques pour la Direction), partagés avec les collaborateurs qui ont les droits. Comme les modèles de rapports, ils ne stockent que des réglages, jamais de chiffres. |
 
 Un graphique ne montre jamais plus que ce que son lecteur peut déjà consulter : tout est lu sous sa RLS.
+
+### Sprint 13 : graphiques
+
+- Composant *Chart* de shadcn/ui (Recharts). Palette catégorielle de huit couleurs validée (daltonisme, contraste) en clair et en sombre, dans un ordre fixe (`--chart-1` à `--chart-8`). Une seule échelle par graphique ; info-bulle au survol ; légende dès deux séries ; sous chaque graphique, « Voir les valeurs » ouvre le tableau des données.
+- Séries temporelles (`src/lib/metrics/series.ts`) : 13 semaines, 12 mois, 8 trimestres ou 5 ans selon la période choisie, jusqu'à la période affichée. Chaque point est calculé par les mêmes fonctions que les indicateurs (historique avant la bascule, conversion des devises, flux, stocks, valeurs non additives) ; une valeur inconnue reste un trou, jamais un 0. Un relevé qui couvre plusieurs points n'est pas compté, et le graphique le signale.
+- **Tableau de bord de la marque**, sous les indicateurs de chaque section : CA signé ; opportunités, offres et contrats ; pipeline par étape (montant dans le tableau) ; taux d'atteinte des objectifs d'équipe ; abonnés, impressions et interactions ; leads et dépense des campagnes ; sessions par canal (ou total, sans ventilation) ; budgets prévu, engagé, payé ; carte Planification (tâches en retard, avancement des projets).
+- **Vue Direction** : CA signé par marque avec la part de chacune (tableau), CA consolidé empilé par marque (au-delà de huit marques, « Autres marques »).
+- Les graphiques se chargent à part : les indicateurs s'affichent sans les attendre. Les lectures partagées (taux de change, date de bascule, historique) sont faites une fois par page.
+- Règles testées : `series.test.ts` (périodes, libellés, sommes et parts sans 0 inventé) et `chart-data.test.ts` (entonnoir, devises sans taux, canaux relevés).
 
 ## 3. Découpage en sprints
 
