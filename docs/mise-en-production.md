@@ -53,6 +53,20 @@
 5. **Contrôles après déploiement** : connexion, création d'une marque (valeurs par défaut posées), activation des modules, ajout d'un collaborateur, tableau de bord, export Excel, impression PDF, en-têtes de sécurité.
 6. **Mise en service** : marques, collaborateurs et rôles ; taux de change USD du mois ; imports de l'existant (prospects, historique agrégé avec sa date de bascule) ; premières saisies.
 
+### Mise en service, pas à pas
+
+Dans cet ordre : chaque étape s'appuie sur la précédente.
+
+1. **Marques** (Paramètres › Marques) : code court, nom, devise de reporting. Listes, statuts et étapes du pipeline par défaut sont créés avec la marque.
+2. **Modules** (paramètres de la marque › Modules) : n'activer que ceux qui serviront ; les menus suivent.
+3. **Listes** (paramètres de la marque › Listes) : secteurs, origines des prospects, catégories de dépenses, avec les intitulés en usage chez vous.
+4. **Comptes** : Supabase › Authentication › Users › *Add user*, mot de passe provisoire et confirmation automatique ; la personne le remplace dans « Mon compte ».
+5. **Rôles** (paramètres de la marque › Collaborateurs) : chaque personne avec son rôle dans la marque ; la Direction reçoit un rôle global (Paramètres › Utilisateurs).
+6. **Taux de change** (Paramètres › Taux de change) : le taux USD → XOF du mois, avec sa source. EUR/XOF est fixe.
+7. **Objets suivis** : comptes sociaux, campagnes, sites, budgets et leurs lignes. Ils doivent exister avant l'import de leurs relevés ou dépenses.
+8. **Imports** (Imports › Modèles à remplir) : télécharger le modèle Excel de chaque import ; ses colonnes sont reconnues automatiquement et ses listes déroulantes reprennent celles de la marque. Ordre conseillé : prospects ; historique agrégé, puis sa date de bascule ; relevés des réseaux, campagnes et sites ; dépenses. Chaque lot est vérifié avant enregistrement et s'annule d'un bloc.
+9. **Premières saisies** : fiches d'activité de la semaine, offres et mémos en cours, objectifs.
+
 ### Bascule du 3 novembre 2026
 
 | Étape | Résultat |
