@@ -11,6 +11,7 @@ import {
   Globe,
   Handshake,
   LayoutDashboard,
+  LayoutGrid,
   ListChecks,
   Megaphone,
   NotebookPen,
@@ -19,6 +20,7 @@ import {
   ShieldCheck,
   Signature,
   Target,
+  Telescope,
   Upload,
   Users,
   Wallet,
@@ -50,6 +52,8 @@ export const brandNavigation: NavGroup[] = [
     items: [
       { title: "Tableau de bord", icon: LayoutDashboard, path: "" },
       { title: "Vue Direction", icon: ChartNoAxesCombined, path: "/direction", permission: "direction.read" },
+      { title: "Explorateur", icon: Telescope, path: "/explorateur", permission: "brand.read" },
+      { title: "Tableaux personnalisés", icon: LayoutGrid, path: "/tableaux", permission: "brand.read" },
     ],
   },
   {

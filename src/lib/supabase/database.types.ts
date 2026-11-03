@@ -499,6 +499,53 @@ export type Database = {
           },
         ]
       }
+      custom_dashboards: {
+        Row: {
+          brand_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_shared: boolean
+          name: string
+          updated_at: string
+          updated_by: string | null
+          widgets: Json
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_shared?: boolean
+          name: string
+          updated_at?: string
+          updated_by?: string | null
+          widgets?: Json
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_shared?: boolean
+          name?: string
+          updated_at?: string
+          updated_by?: string | null
+          widgets?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_dashboards_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_field_definitions: {
         Row: {
           brand_id: string

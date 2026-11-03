@@ -9,8 +9,11 @@ import type { KpiFormat } from "./data";
 
 export type ChartKind = "bar" | "stacked" | "line" | "hbar";
 
-/** Une série : sa couleur suit l'entité (créneau 1 à 8 de la palette), jamais son rang. */
-export type ChartSeries = { key: string; label: string; color: number };
+/**
+ * Une série : sa couleur suit l'entité (créneau 1 à 8 de la palette), jamais son
+ * rang ; « muted » pour une série de référence (comparaison), en gris.
+ */
+export type ChartSeries = { key: string; label: string; color: number | "muted" };
 
 export type ChartRow = { key: string; label: string; title?: string; values: Record<string, number | null> };
 
