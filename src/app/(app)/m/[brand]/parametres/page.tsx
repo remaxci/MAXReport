@@ -154,10 +154,9 @@ async function BrandSettings({ slug }: { slug: string }) {
 
             {canManageMembers && (
               <p className="text-xs text-muted-foreground">
-                Le collaborateur doit d&apos;abord avoir un compte. Les comptes se créent pour
-                l&apos;instant dans Supabase (Authentication › Users) ; l&apos;invitation par
-                e-mail depuis MAXreport viendra avec la configuration d&apos;un service d&apos;envoi
-                d&apos;e-mails.
+                Le collaborateur doit d&apos;abord avoir un compte, créé dans Supabase
+                (Authentication › Users › Invite user : il reçoit un e-mail et choisit son mot de
+                passe). Son rôle peut être attribué ici dès l&apos;invitation envoyée.
               </p>
             )}
           </CardContent>

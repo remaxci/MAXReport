@@ -48,7 +48,9 @@ async function UsersAdmin() {
           <CardDescription>
             Un rôle global (Direction, super-administrateur) vaut pour toutes les marques. Les
             rôles par marque se gèrent dans les paramètres de chaque marque. Pour créer un compte :
-            Supabase › Authentication › Users › Add user ; il apparaît ici automatiquement.
+            Supabase › Authentication › Users › Invite user (la personne reçoit un e-mail et
+            choisit son mot de passe) ou Add user (mot de passe provisoire, à changer dans « Mon
+            compte ») ; il apparaît ici automatiquement.
           </CardDescription>
         </CardHeader>
         <CardContent>

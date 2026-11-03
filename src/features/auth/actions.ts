@@ -1,7 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import type { ActionState } from "@/lib/form";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/server/authz/current-user";
+import { changePassword, requestPasswordReset, setPasswordWithLink } from "./flows";
 
 export type LoginState = { error: string } | null;
 
@@ -30,4 +33,37 @@ export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+function text(formData: FormData, name: string): string {
+  return String(formData.get(name) ?? "");
+}
+
+export async function requestReset(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = await createClient();
+  return requestPasswordReset(supabase.auth, text(formData, "email"));
+}
+
+/** Lien d'invitation ou de réinitialisation reçu par e-mail. */
+export async function acceptEmailLink(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = await createClient();
+  const result = await setPasswordWithLink(supabase.auth, {
+    type: formData.get("type"),
+    tokenHash: formData.get("token_hash"),
+    password: text(formData, "password"),
+    confirmation: text(formData, "confirmation"),
+  });
+  if (result?.ok) redirect("/");
+  return result;
+}
+
+export async function updatePassword(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const user = await getCurrentUser();
+  const supabase = await createClient();
+  return changePassword(supabase.auth, {
+    email: user.email,
+    current: text(formData, "current"),
+    password: text(formData, "password"),
+    confirmation: text(formData, "confirmation"),
+  });
 }
