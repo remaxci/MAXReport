@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { failed, forbidden, type ActionState } from "@/lib/form";
 import { CURRENCIES } from "@/lib/metrics/currency";
-import { PERIOD_KINDS } from "@/lib/periods";
+import { isIsoDate, PERIOD_KINDS } from "@/lib/periods";
 import type { Json } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext } from "@/server/authz/context";
@@ -191,4 +191,29 @@ export async function discardBatch(brandId: string, batchId: string, _previous: 
   if (error) return failed(error);
   if (data.length === 0) return { ok: false, message: "Ce lot est déjà importé : annulez-le plutôt." };
   redirect(`/m/${scope.brand.slug}/imports`);
+}
+
+/** Date de bascule de l'historique : avant elle, les tableaux de bord lisent l'historique importé. */
+export async function saveHistoryCutover(brandId: string, _previous: ActionState, formData: FormData): Promise<ActionState> {
+  if (!uuid.safeParse(brandId).success) return forbidden();
+  const ctx = await getAuthContext();
+  if (!ctx.brands.some((b) => b.id === brandId) || !can(ctx.access, "modules.manage")) return forbidden();
+  const raw = String(formData.get("cutover") ?? "").trim();
+  if (raw !== "" && !isIsoDate(raw)) return { ok: false, message: "Date invalide.", fieldErrors: { cutover: ["Date invalide."] } };
+
+  const supabase = await createClient();
+  const { data: current } = await supabase.from("brand_modules").select("settings").eq("brand_id", brandId).eq("module_key", "imports").maybeSingle();
+  const settings: Record<string, unknown> = { ...((current?.settings as Record<string, unknown> | null) ?? {}) };
+  if (raw) settings.history_cutover = raw;
+  else delete settings.history_cutover;
+  const { data, error } = await supabase
+    .from("brand_modules")
+    .update({ settings: settings as Json })
+    .eq("brand_id", brandId)
+    .eq("module_key", "imports")
+    .select("brand_id");
+  if (error) return failed(error);
+  if (data.length === 0) return forbidden();
+  refresh();
+  return { ok: true, message: raw ? "Date de bascule enregistrée." : "Date de bascule retirée : les tableaux de bord lisent les données saisies." };
 }

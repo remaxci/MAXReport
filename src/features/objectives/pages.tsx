@@ -7,27 +7,25 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getActuals } from "@/features/activities/queries";
 import { getFxRates } from "@/features/fx/queries";
 import { formatMetric } from "@/features/activities/view";
 import { BackLink } from "@/features/crm/view";
 import { getMemberOptions } from "@/features/registers/queries";
 import { ActionButton } from "@/features/settings/components/controls";
 import { formatPercent, todayIso } from "@/lib/format";
-import { availableMetrics, knownActual, METRICS, type ActualRow, type MetricKey } from "@/lib/metrics/actuals";
-import type { Currency } from "@/lib/metrics/currency";
+import { availableMetrics, METRICS, type MetricKey } from "@/lib/metrics/actuals";
 import { PERIOD_KINDS, periodRange, rangeLabel } from "@/lib/periods";
 import { cn } from "@/lib/utils";
 import { findBrand, getAuthContext } from "@/server/authz/context";
 import { can } from "@/server/authz/permissions";
 import { deleteObjective, saveObjective } from "./actions";
 import { ObjectiveForm, type ObjectiveDefaults } from "./components/objective-form";
+import { evaluateObjectives } from "./evaluate";
 import { getObjective, listObjectives, type Objective } from "./queries";
 import {
   OBJECTIVE_STATES,
   OBJECTIVE_STATUS_LABELS,
   parseObjectiveState,
-  readObjective,
   type ObjectiveReading,
   type ObjectiveState,
 } from "./status";
@@ -100,15 +98,7 @@ async function Objectives({ slug, state }: { slug: string; state: ObjectiveState
   ]);
   const labels = new Map(members.map((m) => [m.id, m.label]));
 
-  // Un calcul des réalisés par période distincte.
-  const periods = [...new Map(objectives.map((o) => [`${o.periodStart}|${o.periodEnd}`, o])).values()];
-  const actualsByPeriod = new Map<string, ActualRow[]>(
-    await Promise.all(
-      periods.map(
-        async (o) => [`${o.periodStart}|${o.periodEnd}`, await getActuals(brand.id, o.periodStart, o.periodEnd)] as const,
-      ),
-    ),
-  );
+  const evaluated = new Map((await evaluateObjectives(brand, objectives, rates, today)).map((e) => [e.objective.id, e]));
 
   // Regroupement par indicateur et période : l'objectif d'équipe, puis les
   // collaborateurs classés par taux d'atteinte (comparaison des commerciaux).
@@ -120,15 +110,7 @@ async function Objectives({ slug, state }: { slug: string; state: ObjectiveState
     groups.set(key, group);
   }
 
-  const read = (o: Objective) => {
-    const rows = actualsByPeriod.get(`${o.periodStart}|${o.periodEnd}`) ?? [];
-    const actual = knownActual(rows, o.metric, o.userId, brand.enabledModules, {
-      currency: (o.currency ?? brand.reportingCurrency) as Currency,
-      date: o.periodEnd,
-      rates,
-    });
-    return { actual, reading: readObjective(actual.value, o.target, { start: o.periodStart, end: o.periodEnd }, today) };
-  };
+  const read = (o: Objective) => evaluated.get(o.id)!;
 
   return (
     <Page>

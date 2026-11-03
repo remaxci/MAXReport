@@ -152,3 +152,13 @@ export function elapsedShare(start: string, end: string, today: string): number 
   const elapsed = (toDate(today).getTime() - toDate(start).getTime()) / DAY_MS + 1;
   return elapsed / total;
 }
+
+/** Période d'une adresse (?periode=mois&du=AAAA-MM-JJ), le jour donné par défaut. */
+export function periodFromQuery(kind: string | undefined, anchor: string | undefined, today: string, fallback: PeriodKind = "month"): Period {
+  return periodRange(parsePeriodKind(kind, fallback), isIsoDate(anchor) ? anchor : today);
+}
+
+/** Paramètres d'adresse d'une période : « periode=mois&du=2026-11-01 ». */
+export function periodSearch(period: Period): string {
+  return `periode=${PERIOD_SLUGS[period.kind]}&du=${period.start}`;
+}

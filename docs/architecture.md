@@ -430,7 +430,7 @@ Les fonctions d'agrégation sont les mêmes que pour une marque, appliquées à 
 
 Un sprint est un lot livrable et vérifiable, développé sur sa propre branche avec une URL Preview Vercel.
 
-**Avancement :** Sprints 0 à 7 livrés sur leurs branches (base de dev, Preview Vercel). Rien n'est encore en production. Le Sprint 4 a été découpé : 4a (prospects, contacts, échanges, opportunités, contrats) puis 4b (fiches d'activité hebdomadaire, vues du responsable, objectifs).
+**Avancement :** Sprints 0 à 8 livrés sur leurs branches (base de dev, Preview Vercel). Rien n'est encore en production. Le Sprint 4 a été découpé : 4a (prospects, contacts, échanges, opportunités, contrats) puis 4b (fiches d'activité hebdomadaire, vues du responsable, objectifs).
 
 **Décision Sprint 4a :** l'annuaire des prospects est partagé au sein d'une marque (permission `crm.read`) pour éviter les doublons d'entreprises ; les opportunités, offres, mémos et contrats restent personnels pour les commerciaux (`*.manage_own`).
 
@@ -467,6 +467,14 @@ Un sprint est un lot livrable et vérifiable, développé sur sa propre branche 
 - Conversion au dernier taux connu à la date de l'opération ; les montants sans taux sont exclus et signalés. Les taux saisis servent aussi au pipeline pondéré, aux contrats, aux objectifs, aux fiches d'activité et aux campagnes.
 - Un budget clôturé ne reçoit plus de dépenses ; budgets et dépenses s'archivent ; une ligne sans dépense se supprime.
 - Les dépenses s'importent (Sprint 6) et l'annulation du lot les supprime.
+
+**Règles Sprint 8 :**
+- Tableau de bord de marque par sections (commercial, objectifs en cours, réseaux sociaux, campagnes, sites, budgets), visibles selon les modules actifs et les droits ; tout est lu sous la RLS de l'utilisateur : un tableau de bord ne montre jamais plus que ce que son lecteur peut déjà consulter.
+- Commercial : réalisés de l'équipe (`metric_actuals`), taux de transformation des offres et de réponse aux mémos (par date d'envoi), pipeline pondéré en cours. Évolutions en % par rapport à la période précédente ; un taux évolue en points.
+- Historique agrégé : date de bascule par marque (paramètres du module Imports, rôle global). Avant elle, l'historique importé (chiffre d'équipe s'il existe, sinon somme des collaborateurs) ; à partir d'elle, les données saisies. Une période à cheval est coupée à la date de bascule.
+- Vue Direction (`direction.read`, rôles globaux) : une ligne par marque et un total consolidé en XOF ; seuls des flux s'additionnent (CA signé, contrats, opportunités, offres, dépense de campagnes, leads, budget engagé).
+- Modèles de rapports (`report_templates`, `reports.manage`) : nom, sections, période par défaut ; aucune donnée stockée.
+- Exports : Excel (mêmes chiffres qu'à l'écran, mêmes droits) et PDF par l'impression du navigateur (mise en page sans menu).
 
 | Sprint | Contenu | Taille |
 |---|---|---|

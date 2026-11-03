@@ -128,3 +128,25 @@
     @apply font-sans;
   }
 }
+/* Impression et PDF : seul le contenu de la page, sans menu ni en-tête. */
+@media print {
+  [data-slot="sidebar"],
+  [data-slot="sidebar-gap"],
+  [data-slot="sidebar-container"],
+  [data-slot="sidebar-rail"] {
+    display: none !important;
+  }
+
+  [data-slot="sidebar-inset"] {
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
+  body {
+    background: white;
+  }
+
+  @page {
+    margin: 12mm;
+  }
+}

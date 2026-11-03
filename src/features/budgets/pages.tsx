@@ -10,12 +10,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { MetricTile } from "@/features/activities/view";
 import { getListItems } from "@/features/crm/queries";
 import { BackLink } from "@/features/crm/view";
-import { getFxRates } from "@/features/fx/queries";
 import { listCampaigns } from "@/features/marketing/queries";
 import { ActionButton, EditDetails } from "@/features/settings/components/controls";
 import { formatDate, formatMoney, formatPercent, todayIso } from "@/lib/format";
-import { computeBudget, type BudgetLevel, type BudgetResult } from "@/lib/metrics/budget";
-import type { FxRate } from "@/lib/metrics/currency";
+import type { BudgetLevel, BudgetResult } from "@/lib/metrics/budget";
 import { rangeLabel } from "@/lib/periods";
 import { cn } from "@/lib/utils";
 import { findBrand, getAuthContext } from "@/server/authz/context";
@@ -31,23 +29,8 @@ import {
   setExpensePaid,
 } from "./actions";
 import { BudgetForm, ExpenseForm, LineForm, ThresholdForm, type BudgetDefaults, type ExpenseDefaults } from "./components/forms";
-import {
-  BUDGET_SCOPES,
-  BUDGET_STATUSES,
-  EXPENSE_STATUSES,
-  getBudget,
-  getExpense,
-  getInvoicedCampaigns,
-  getPlatformSpend,
-  getWarningThreshold,
-  listBudgets,
-  listExpenses,
-  listLines,
-  type Budget,
-  type BudgetLine,
-  type Expense,
-  type PlatformSpend,
-} from "./queries";
+import { evaluateBudget, loadBudgetData } from "./evaluate";
+import { BUDGET_SCOPES, BUDGET_STATUSES, EXPENSE_STATUSES, getBudget, getExpense, listBudgets, listLines, type Expense } from "./queries";
 
 type Params = Promise<{ brand: string }>;
 type ParamsWithId = Promise<{ brand: string; id: string }>;
@@ -64,45 +47,6 @@ async function loadBrand(slug: string) {
 }
 
 const options = (labels: Record<string, string>) => Object.entries(labels).map(([id, label]) => ({ id, label }));
-
-/** Calcul d'un budget : relevés de campagne compris dans sa période seulement. */
-function evaluate(
-  budget: Budget,
-  lines: BudgetLine[],
-  expenses: Expense[],
-  invoiced: Set<string>,
-  spend: PlatformSpend[],
-  rates: FxRate[],
-  threshold: number,
-): BudgetResult {
-  const ids = new Set(lines.map((l) => l.id));
-  return computeBudget({
-    currency: budget.currency,
-    envelope: budget.amount,
-    lines: lines.map((l) => ({ id: l.id, amount: l.amount, campaignId: l.campaignId })),
-    expenses: expenses
-      .filter((e) => ids.has(e.lineId))
-      .map((e) => ({ lineId: e.lineId, amount: e.amount, currency: e.currency, date: e.date, status: e.status })),
-    invoicedCampaigns: invoiced,
-    platformSpend: spend.filter((s) => s.periodStart >= budget.periodStart && s.periodEnd <= budget.periodEnd),
-    rates,
-    warningThreshold: threshold,
-  });
-}
-
-/** Lignes, dépenses et données de calcul d'un ensemble de budgets. */
-async function loadBudgetData(brandId: string, budgets: Budget[]) {
-  const lines = await listLines(brandId, budgets.map((b) => b.id));
-  const campaignIds = [...new Set(lines.map((l) => l.campaignId).filter((id): id is string => id !== null))];
-  const [expenses, invoiced, spend, rates, threshold] = await Promise.all([
-    listExpenses(brandId, lines.map((l) => l.id)),
-    getInvoicedCampaigns(brandId, campaignIds),
-    getPlatformSpend(brandId, campaignIds),
-    getFxRates(),
-    getWarningThreshold(brandId),
-  ]);
-  return { lines, expenses, invoiced, spend, rates, threshold };
-}
 
 const LEVEL: Record<BudgetLevel, { label: string; variant: "secondary" | "outline" | "destructive" }> = {
   ok: { label: "Dans le budget", variant: "secondary" },
@@ -216,15 +160,7 @@ async function Budgets({ slug, archived }: { slug: string; archived: boolean }) 
                 </TableRow>
               )}
               {budgets.map((b) => {
-                const result = evaluate(
-                  b,
-                  data.lines.filter((l) => l.budgetId === b.id),
-                  data.expenses,
-                  data.invoiced,
-                  data.spend,
-                  data.rates,
-                  data.threshold,
-                );
+                const result = evaluateBudget(b, data);
                 return (
                   <TableRow key={b.id}>
                     <TableCell>
@@ -350,7 +286,7 @@ async function BudgetDetail({ slug, id }: { slug: string; id: string }) {
     getListItems(brand.id, "expense_categories"),
     brand.enabledModules.includes("campaigns") ? listCampaigns(brand.id, false) : Promise.resolve([]),
   ]);
-  const result = evaluate(budget, data.lines, data.expenses, data.invoiced, data.spend, data.rates, data.threshold);
+  const result = evaluateBudget(budget, data);
   const byLine = new Map(result.lines.map((l) => [l.id, l]));
   const lineLabels = new Map(data.lines.map((l) => [l.id, l.label]));
   const categoryLabels = new Map(categories.map((c) => [c.id, c.label]));

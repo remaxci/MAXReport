@@ -7,8 +7,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { formatMoney, formatNumber } from "@/lib/format";
-import { METRICS, type MetricKey } from "@/lib/metrics/actuals";
 import { PERIOD_KINDS, PERIOD_LABELS, PERIOD_SLUGS, periodLabel, shiftPeriod, type Period } from "@/lib/periods";
 import { cn } from "@/lib/utils";
 import { REPORT_STATUS_LABELS, type ReportStatus } from "./queries";
@@ -89,10 +87,7 @@ export function PeriodPicker({ action, period, maxStart }: { action: string; per
   );
 }
 
-/** Valeur d'un indicateur : nombre, ou montant dans la devise de la marque. */
-export function formatMetric(metric: MetricKey, value: number | null, currency: string): string {
-  return METRICS[metric].money ? (value === null ? "—" : formatMoney(value, currency)) : formatNumber(value);
-}
+export { formatMetric } from "@/lib/metrics/actuals";
 
 export function MetricTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (

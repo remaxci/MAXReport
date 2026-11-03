@@ -12,8 +12,9 @@ import { formatBytes, formatDateTime, formatNumber } from "@/lib/format";
 import { findBrand, getAuthContext } from "@/server/authz/context";
 import { can } from "@/server/authz/permissions";
 import { canImport, importableTargets } from "./access";
-import { commitBatch, discardBatch, rollbackBatch, saveMapping, uploadImport } from "./actions";
-import { ConfirmAction, MappingForm, UploadForm } from "./components/forms";
+import { getHistoryCutover } from "@/features/dashboard/queries";
+import { commitBatch, discardBatch, rollbackBatch, saveHistoryCutover, saveMapping, uploadImport } from "./actions";
+import { ConfirmAction, CutoverForm, MappingForm, UploadForm } from "./components/forms";
 import { checkBatch, readOptions, type LineResult } from "./normalize";
 import { findSameFile, getBatch, getImportContext, listBatches, type Batch, type BatchStatus } from "./queries";
 import { IMPORT_ACCEPT } from "./read";
@@ -59,7 +60,7 @@ async function Imports({ slug }: { slug: string }) {
   const { ctx, brand } = await loadBrand(slug);
   if (!can(ctx.access, "imports.manage", brand.id)) return <Forbidden />;
   const targets = importableTargets(ctx.access, brand);
-  const [batches, members] = await Promise.all([listBatches(brand.id), getMemberOptions(brand.id)]);
+  const [batches, members, cutover] = await Promise.all([listBatches(brand.id), getMemberOptions(brand.id), getHistoryCutover(brand.id)]);
   const authors = new Map(members.map((m) => [m.id, m.label]));
   const base = `/m/${brand.slug}/imports`;
 
@@ -89,6 +90,21 @@ async function Imports({ slug }: { slug: string }) {
           )}
         </CardContent>
       </Card>
+
+      {can(ctx.access, "modules.manage") && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Historique agrégé : date de bascule</CardTitle>
+            <CardDescription>
+              Avant cette date, les tableaux de bord et rapports lisent l&apos;historique importé ; à partir d&apos;elle, les données
+              saisies dans MAXreport. Jamais les deux sur un même jour. Sans date, seules les données saisies sont lues.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CutoverForm action={saveHistoryCutover.bind(null, brand.id)} cutover={cutover} />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

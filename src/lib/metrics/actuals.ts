@@ -2,6 +2,7 @@
 // (fonction SQL `metric_actuals`). Une seule source par indicateur :
 // docs/architecture.md, section 6.
 
+import { formatMoney, formatNumber } from "@/lib/format";
 import { convert, type Currency, type FxRate } from "./currency";
 
 export const METRIC_KEYS = [
@@ -121,4 +122,9 @@ export function knownActual(
   const matched = rows.some((r) => r.metricKey === metric && (userId === null || r.userId === userId));
   if (!matched && comesFromReports(metric, enabledModules)) return { value: null, excludedCurrencies: [] };
   return actualValue(rows, metric, userId, options);
+}
+
+/** Valeur d'un indicateur : nombre, ou montant dans la devise donnée. */
+export function formatMetric(metric: MetricKey, value: number | null, currency: string): string {
+  return METRICS[metric].money ? (value === null ? "—" : formatMoney(value, currency)) : formatNumber(value);
 }

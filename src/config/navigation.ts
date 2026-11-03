@@ -46,7 +46,7 @@ export const brandNavigation: NavGroup[] = [
     label: "Pilotage",
     items: [
       { title: "Tableau de bord", icon: LayoutDashboard, path: "" },
-      { title: "Vue Direction", icon: ChartNoAxesCombined },
+      { title: "Vue Direction", icon: ChartNoAxesCombined, path: "/direction", permission: "direction.read" },
     ],
   },
   {
@@ -103,7 +103,7 @@ export const brandNavigation: NavGroup[] = [
     items: [
       { title: "Objectifs", icon: Target, module: "objectives", path: "/objectifs", permission: "brand.read" },
       { title: "Budgets", icon: Wallet, module: "budgets", path: "/budgets", permission: ["budgets.read", "budgets.manage"] },
-      { title: "Rapports", icon: ChartColumn, module: "reports" },
+      { title: "Rapports", icon: ChartColumn, module: "reports", path: "/rapports", permission: "brand.read" },
       { title: "Imports", icon: Upload, module: "imports", path: "/imports", permission: "imports.manage" },
     ],
   },

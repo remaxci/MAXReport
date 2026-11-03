@@ -231,3 +231,22 @@ export function ConfirmAction({
     </div>
   );
 }
+
+// ---------------------------------------------------------------------
+// Date de bascule de l'historique
+// ---------------------------------------------------------------------
+
+export function CutoverForm({ action, cutover }: { action: FormAction; cutover: string | null }) {
+  const [state, formAction, pending] = useActionState(action, null);
+  return (
+    <form onSubmit={submitWithoutReset(formAction)} className="flex flex-wrap items-end gap-3">
+      <Field label="Date de bascule" name="cutover" state={state}>
+        <Input id="cutover" name="cutover" type="date" defaultValue={cutover ?? ""} className="w-44" />
+      </Field>
+      <Button type="submit" variant="outline" disabled={pending}>
+        Enregistrer
+      </Button>
+      <FormMessage state={state} />
+    </form>
+  );
+}
