@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signIn, type LoginState } from "../actions";
 
-export function LoginForm() {
+export function LoginForm({ forgotPassword }: { forgotPassword: boolean }) {
   const [state, formAction, pending] = useActionState<LoginState, FormData>(
     signIn,
     null,
@@ -22,12 +22,14 @@ export function LoginForm() {
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
           <Label htmlFor="password">Mot de passe</Label>
-          <Link
-            href="/mot-de-passe-oublie"
-            className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-          >
-            Mot de passe oublié ?
-          </Link>
+          {forgotPassword && (
+            <Link
+              href="/mot-de-passe-oublie"
+              className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Mot de passe oublié ?
+            </Link>
+          )}
         </div>
         <Input
           id="password"

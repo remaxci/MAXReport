@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import type { ActionState } from "@/lib/form";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/server/authz/current-user";
+import { emailLinksEnabled } from "./email-link";
 import { changePassword, requestPasswordReset, setPasswordWithLink } from "./flows";
 
 export type LoginState = { error: string } | null;
@@ -40,6 +41,9 @@ function text(formData: FormData, name: string): string {
 }
 
 export async function requestReset(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  if (!emailLinksEnabled()) {
+    return { ok: false, message: "La réinitialisation par e-mail n'est pas encore disponible." };
+  }
   const supabase = await createClient();
   return requestPasswordReset(supabase.auth, text(formData, "email"));
 }

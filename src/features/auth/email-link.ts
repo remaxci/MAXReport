@@ -4,6 +4,16 @@
 // l'ouverture du lien : un antivirus de messagerie qui visite les liens
 // ne peut pas le griller avant la personne.
 
+/**
+ * Liens par e-mail en service : SMTP configuré dans Supabase et modèles de
+ * supabase/templates/ en place. Variable serveur EMAIL_LINKS_ENABLED=true,
+ * puis redéploiement. Sans elle, « Mot de passe oublié ? » est masqué et les
+ * comptes se créent avec un mot de passe provisoire.
+ */
+export function emailLinksEnabled(): boolean {
+  return process.env.EMAIL_LINKS_ENABLED === "true";
+}
+
 export type EmailLinkType = "invite" | "recovery";
 export type EmailLink = { type: EmailLinkType; tokenHash: string };
 

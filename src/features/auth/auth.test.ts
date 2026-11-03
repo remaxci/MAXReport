@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { parseEmailLink } from "./email-link";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { emailLinksEnabled, parseEmailLink } from "./email-link";
 import {
   LINK_INVALID,
   RESET_REQUESTED,
@@ -51,6 +51,19 @@ describe("checkNewPassword", () => {
       field: "confirmation",
       message: "Les deux saisies ne correspondent pas.",
     });
+  });
+});
+
+describe("emailLinksEnabled", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("reste désactivé tant que la variable ne vaut pas exactement « true »", () => {
+    vi.stubEnv("EMAIL_LINKS_ENABLED", "");
+    expect(emailLinksEnabled()).toBe(false);
+    vi.stubEnv("EMAIL_LINKS_ENABLED", "1");
+    expect(emailLinksEnabled()).toBe(false);
+    vi.stubEnv("EMAIL_LINKS_ENABLED", "true");
+    expect(emailLinksEnabled()).toBe(true);
   });
 });
 

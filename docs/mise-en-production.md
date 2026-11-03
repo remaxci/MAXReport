@@ -40,7 +40,7 @@
      - inscriptions libres désactivées (fait ; l'API d'authentification renvoie `disable_signup: true`) ;
      - longueur minimale des mots de passe : 10 (fait) ;
      - mots de passe compromis : réservé à l'offre Pro, à activer après le passage en Pro ;
-     - SMTP : à configurer (Authentication › Emails › SMTP Settings), sur `MAXreport-dev` puis sur `MAXreport`. Supabase n'autorise la modification des modèles d'e-mail qu'une fois un SMTP personnalisé en place ; recopier ensuite les modèles de `supabase/templates/`. Les pages qui reçoivent les liens sont prêtes (branche `evolution/invitations-mots-de-passe`).
+     - SMTP : en attente d'identifiants (boîte d'envoi dédiée, par exemple `noreply@remax.ci`, à demander à l'hébergeur Safaricloud). Serveur `mail.remax.ci`, port 465 ; l'identifiant est l'adresse complète de la boîte. Sur `MAXreport-dev`, le SMTP est activé mais refusé (`535 Incorrect authentication data`) et les modèles de `supabase/templates/` sont en place. Une fois l'envoi vérifié : configurer `MAXreport`, y recopier les modèles, puis poser `EMAIL_LINKS_ENABLED=true` dans Vercel (Production et Preview) et redéployer.
 3. **Domaine** (facultatif) : un sous-domaine du type `maxreport.remax.ci` à relier au projet Vercel.
 4. Préparer la **liste des marques** (code court, nom, devise) et des **collaborateurs** (e-mail, marque, rôle).
 
@@ -73,7 +73,7 @@
 ## 4. Exploitation courante
 
 - **Chaque mois** : saisir le taux USD → XOF (Paramètres › Taux de change), avec sa source.
-- **Comptes** : inviter la personne (Supabase › Authentication › Users › *Invite user*) : elle reçoit un lien valable une heure et choisit son mot de passe. Sans SMTP, créer le compte avec *Add user* et un mot de passe provisoire, à remplacer dans « Mon compte ». Puis l'affecter à une marque avec un rôle (possible dès l'invitation envoyée).
-- **Mot de passe oublié** : lien « Mot de passe oublié ? » de la page de connexion (nécessite le SMTP).
+- **Comptes** : aujourd'hui, Supabase › Authentication › Users › *Add user* (mot de passe provisoire, confirmation automatique) ; la personne le remplace dans « Mon compte ». Puis l'affecter à une marque avec un rôle. Une fois les liens par e-mail en service : *Invite user*, la personne reçoit un lien valable une heure et choisit son mot de passe ; le rôle peut être attribué dès l'invitation envoyée.
+- **Mot de passe oublié** : lien de la page de connexion, visible une fois les liens par e-mail en service. D'ici là, l'administrateur fixe un mot de passe provisoire dans l'éditeur SQL de Supabase (les actions du tableau de bord passent elles aussi par l'e-mail) : `update auth.users set encrypted_password = extensions.crypt('<provisoire>', extensions.gen_salt('bf')) where email = '<adresse>';`, puis la personne le remplace dans « Mon compte ».
 - **Journal d'audit** : toute création, modification ou suppression est tracée (auteur, date, valeurs avant et après).
 - **Évolutions** : branche dédiée, migration testée sur la base de test, tests de `supabase/tests/` relancés, Preview validée, puis fusion dans `main` après validation.

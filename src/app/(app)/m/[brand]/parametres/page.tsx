@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { emailLinksEnabled } from "@/features/auth/email-link";
 import { updateBrand } from "@/features/brands/actions";
 import { BrandSettingsForm } from "@/features/brands/components/brand-settings-form";
 import { addMember, removeMember, updateMemberRole } from "@/features/members/actions";
@@ -154,9 +155,9 @@ async function BrandSettings({ slug }: { slug: string }) {
 
             {canManageMembers && (
               <p className="text-xs text-muted-foreground">
-                Le collaborateur doit d&apos;abord avoir un compte, créé dans Supabase
-                (Authentication › Users › Invite user : il reçoit un e-mail et choisit son mot de
-                passe). Son rôle peut être attribué ici dès l&apos;invitation envoyée.
+                {emailLinksEnabled()
+                  ? "Le collaborateur doit d'abord avoir un compte, créé dans Supabase (Authentication › Users › Invite user : il reçoit un e-mail et choisit son mot de passe). Son rôle peut être attribué ici dès l'invitation envoyée."
+                  : "Le collaborateur doit d'abord avoir un compte, créé dans Supabase (Authentication › Users › Add user, avec un mot de passe provisoire qu'il remplace dans « Mon compte »)."}
               </p>
             )}
           </CardContent>
