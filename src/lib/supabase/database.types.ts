@@ -2244,6 +2244,308 @@ export type Database = {
           },
         ]
       }
+      milestones: {
+        Row: {
+          brand_id: string
+          created_at: string
+          created_by: string | null
+          due_on: string
+          id: string
+          name: string
+          project_id: string
+          reached_on: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          created_by?: string | null
+          due_on: string
+          id?: string
+          name: string
+          project_id: string
+          reached_on?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          created_by?: string | null
+          due_on?: string
+          id?: string
+          name?: string
+          project_id?: string
+          reached_on?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milestones_brand_id_project_id_fkey"
+            columns: ["brand_id", "project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["brand_id", "id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          archived_at: string | null
+          brand_id: string
+          color: string | null
+          created_at: string
+          created_by: string | null
+          custom: Json
+          description: string | null
+          end_on: string | null
+          id: string
+          name: string
+          owner_id: string | null
+          start_on: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          brand_id: string
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom?: Json
+          description?: string | null
+          end_on?: string | null
+          id?: string
+          name: string
+          owner_id?: string | null
+          start_on?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          brand_id?: string
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom?: Json
+          description?: string | null
+          end_on?: string | null
+          id?: string
+          name?: string
+          owner_id?: string | null
+          start_on?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_events: {
+        Row: {
+          actor_id: string | null
+          brand_id: string
+          id: string
+          occurred_at: string
+          payload: Json
+          task_id: string
+          type: string
+        }
+        Insert: {
+          actor_id?: string | null
+          brand_id: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          task_id: string
+          type: string
+        }
+        Update: {
+          actor_id?: string | null
+          brand_id?: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          task_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_events_brand_id_task_id_fkey"
+            columns: ["brand_id", "task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["brand_id", "id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          archived_at: string | null
+          assignee_id: string | null
+          brand_id: string
+          campaign_id: string | null
+          company_id: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          custom: Json
+          description: string | null
+          document_id: string | null
+          due_on: string | null
+          estimate_hours: number | null
+          id: string
+          milestone_id: string | null
+          parent_id: string | null
+          position: number
+          priority: string
+          progress: number
+          project_id: string | null
+          start_on: string | null
+          status_id: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          assignee_id?: string | null
+          brand_id: string
+          campaign_id?: string | null
+          company_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom?: Json
+          description?: string | null
+          document_id?: string | null
+          due_on?: string | null
+          estimate_hours?: number | null
+          id?: string
+          milestone_id?: string | null
+          parent_id?: string | null
+          position?: number
+          priority?: string
+          progress?: number
+          project_id?: string | null
+          start_on?: string | null
+          status_id: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          assignee_id?: string | null
+          brand_id?: string
+          campaign_id?: string | null
+          company_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom?: Json
+          description?: string | null
+          document_id?: string | null
+          due_on?: string | null
+          estimate_hours?: number | null
+          id?: string
+          milestone_id?: string | null
+          parent_id?: string | null
+          position?: number
+          priority?: string
+          progress?: number
+          project_id?: string | null
+          start_on?: string | null
+          status_id?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_brand_id_campaign_id_fkey"
+            columns: ["brand_id", "campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "tasks_brand_id_company_id_fkey"
+            columns: ["brand_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "tasks_brand_id_document_id_fkey"
+            columns: ["brand_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_documents"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "tasks_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_brand_id_milestone_id_fkey"
+            columns: ["brand_id", "milestone_id"]
+            isOneToOne: false
+            referencedRelation: "milestones"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "tasks_brand_id_parent_id_fkey"
+            columns: ["brand_id", "parent_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "tasks_brand_id_project_id_fkey"
+            columns: ["brand_id", "project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["brand_id", "id"]
+          },
+          {
+            foreignKeyName: "tasks_brand_id_status_id_fkey"
+            columns: ["brand_id", "status_id"]
+            isOneToOne: false
+            referencedRelation: "statuses"
+            referencedColumns: ["brand_id", "id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

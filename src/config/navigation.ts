@@ -6,9 +6,11 @@ import {
   ChartColumn,
   ChartNoAxesCombined,
   FileText,
+  FolderKanban,
   Globe,
   Handshake,
   LayoutDashboard,
+  ListChecks,
   Megaphone,
   NotebookPen,
   Settings,
@@ -96,6 +98,13 @@ export const brandNavigation: NavGroup[] = [
         path: "/contrats",
         permission: ["contracts.read_all", "contracts.manage_all", "contracts.manage_own"],
       },
+    ],
+  },
+  {
+    label: "Planification",
+    items: [
+      { title: "Projets", icon: FolderKanban, module: "planning", path: "/projets", permission: "planning.read" },
+      { title: "Tâches", icon: ListChecks, module: "planning", path: "/taches", permission: "planning.read" },
     ],
   },
   {

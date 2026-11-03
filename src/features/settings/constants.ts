@@ -1,12 +1,13 @@
 // Libellés des natures fixes utilisées par le paramétrage.
 
-export const STATUS_ENTITIES = ["company", "offer", "memo"] as const;
+export const STATUS_ENTITIES = ["company", "offer", "memo", "task"] as const;
 export type StatusEntity = (typeof STATUS_ENTITIES)[number];
 
 export const STATUS_ENTITY_LABELS: Record<StatusEntity, string> = {
   company: "Prospects",
   offer: "Offres",
   memo: "Mémos stratégiques",
+  task: "Tâches",
 };
 
 export const STATUS_CATEGORIES = ["draft", "active", "success", "failure", "closed"] as const;
