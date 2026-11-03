@@ -43,6 +43,7 @@ export const PERMISSIONS = [
   "direction.read",
   "planning.read",
   "planning.manage",
+  "bi.connect",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

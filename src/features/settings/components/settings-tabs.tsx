@@ -12,6 +12,7 @@ const TABS = [
   { path: "/statuts", label: "Statuts" },
   { path: "/pipeline", label: "Pipeline" },
   { path: "/champs", label: "Champs personnalisés" },
+  { path: "/connexion-bi", label: "Connexion BI" },
 ];
 
 export function SettingsTabs() {

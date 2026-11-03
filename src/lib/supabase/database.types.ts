@@ -53,6 +53,38 @@ export type Database = {
         }
         Relationships: []
       }
+      bi_access_keys: {
+        Row: {
+          brand_id: string | null
+          created_at: string
+          created_by: string
+          datasets: string[]
+          expires_at: string
+          id: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+          revoked_by: string | null
+          token_hash: string
+          token_hint: string
+          use_count: number
+          window_count: number
+          window_started_at: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          datasets: string[]
+          expires_at: string
+          id?: string
+          name: string
+          token_hash: string
+          token_hint: string
+        }
+        Update: {
+          revoked_at?: string | null
+        }
+        Relationships: []
+      }
       brand_modules: {
         Row: {
           brand_id: string
@@ -2742,6 +2774,11 @@ export type Database = {
       add_brand_member: {
         Args: { p_brand_id: string; p_email: string; p_role_id: string }
         Returns: string
+      }
+      bi_catalog: { Args: { p_token: string }; Returns: Json }
+      bi_read: {
+        Args: { p_dataset: string; p_limit?: number; p_offset?: number; p_token: string }
+        Returns: Json
       }
       brand_member_options: {
         Args: { p_brand_id: string }
