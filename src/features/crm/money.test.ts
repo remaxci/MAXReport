@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sumInCurrency } from "./money";
+import { knownTotal, sumInCurrency } from "./money";
 
 describe("sumInCurrency", () => {
   it("additionne XOF et EUR via la parité fixe", () => {
@@ -46,5 +46,25 @@ describe("sumInCurrency avec taux saisis", () => {
       total: 0,
       excluded: 1,
     });
+  });
+});
+
+describe("knownTotal", () => {
+  it("rien de converti : inconnu, jamais 0", () => {
+    const usd = [
+      { amount: 44.06, currency: "USD" },
+      { amount: 113, currency: "USD" },
+    ];
+    expect(knownTotal(sumInCurrency(usd, "XOF", "2026-11-01"))).toBeNull();
+  });
+
+  it("somme partielle gardée, exclusions signalées à part", () => {
+    const sum = sumInCurrency([{ amount: 1000, currency: "XOF" }, { amount: 113, currency: "USD" }], "XOF", "2026-11-01");
+    expect(sum.excluded).toBe(1);
+    expect(knownTotal(sum)).toBe(1000);
+  });
+
+  it("aucun montant du tout : 0, comme un registre vide", () => {
+    expect(knownTotal(sumInCurrency([], "XOF", "2026-11-01"))).toBe(0);
   });
 });

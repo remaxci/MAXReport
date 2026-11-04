@@ -15,6 +15,34 @@ export function ratio(
   return (numerator / denominator) * factor;
 }
 
+/**
+ * Ratio d'un total sur plusieurs lignes : seules comptent les lignes où les deux
+ * mesures sont connues, sinon le ratio mêlerait des chiffres qui ne se répondent
+ * pas (des clics sans leurs impressions). `left` : lignes écartées, à signaler.
+ */
+export function pairedRatio(
+  rows: readonly Readonly<Record<string, Measure>>[],
+  numerator: string,
+  denominator: string,
+  factor = 1,
+): { value: number | null; left: number } {
+  let top = 0;
+  let bottom = 0;
+  let counted = 0;
+  let left = 0;
+  for (const row of rows) {
+    const [a, b] = [row[numerator], row[denominator]];
+    if (a != null && b != null) {
+      top += a;
+      bottom += b;
+      counted += 1;
+    } else if (a != null || b != null) {
+      left += 1;
+    }
+  }
+  return { value: counted > 0 ? ratio(top, bottom, factor) : null, left };
+}
+
 /** Taux de clics, en %. */
 export const ctr = (clicks: Measure, impressions: Measure) =>
   ratio(clicks, impressions, 100);
