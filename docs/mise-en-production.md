@@ -98,3 +98,4 @@ Dans cet ordre : chaque étape s'appuie sur la précédente.
   - facultatif : `APP_URL` (adresse des liens dans les e-mails ; par défaut le domaine de production Vercel).
   La tâche planifiée (`vercel.json`) appelle `/api/cron/notifications` du lundi au vendredi vers 6 h (UTC, donc heure d'Abidjan) ; sans `CRON_SECRET` correct, la route refuse. Chacun règle ou coupe son récapitulatif dans « Mon compte », où figure aussi le dernier envoi.
 - **Évolutions** : branche dédiée, migration testée sur la base de test, tests de `supabase/tests/` relancés, Preview validée, puis fusion dans `main` après validation.
+- **Connexion BI** (Power BI, Excel ; lecture seule) : clés d'accès créées dans Paramètres de la marque › Connexion BI par les personnes à qui le super-administrateur accorde la permission « Créer et révoquer les clés de connexion BI ». Aucune variable d'environnement à poser. Révoquer sans attendre une clé perdue ou divulguée. Voir `docs/connexion-bi.md`.

@@ -3,9 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // Pages accessibles sans être connecté : connexion, demande d'un lien de
 // réinitialisation, lien d'invitation ou de réinitialisation reçu par e-mail.
-// Les tâches planifiées (/api/cron/) n'ont pas de session : chacune exige son
-// propre secret (en-tête Authorization), vérifié par la route elle-même.
-const PUBLIC_PATHS = ["/login", "/mot-de-passe-oublie", "/confirmer-acces", "/api/cron/"];
+// Les tâches planifiées (/api/cron/) et la connexion BI (/api/bi/) n'ont pas de
+// session : chacune exige son propre secret (en-tête Authorization), vérifié
+// par la route ou par la base.
+const PUBLIC_PATHS = ["/login", "/mot-de-passe-oublie", "/confirmer-acces", "/api/cron/", "/api/bi/"];
 
 // Rafraîchit la session Supabase à chaque requête et renvoie vers /login
 // les visiteurs non connectés. C'est une vérification rapide : les données
