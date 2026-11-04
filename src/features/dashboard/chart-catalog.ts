@@ -23,10 +23,13 @@ export const CHART_CATALOG: Record<ChartGroupKey, { key: string; label: string }
   ],
   objectives: [{ key: "objectives", label: "Taux d'atteinte des objectifs d'équipe" }],
   social: [
+    { key: "accounts", label: "Nouveaux abonnés par compte" },
     { key: "followers", label: "Abonnés" },
     { key: "audience", label: "Impressions et interactions" },
   ],
   campaigns: [
+    { key: "by_campaign_spend", label: "Dépense par campagne" },
+    { key: "by_campaign_clicks", label: "Clics par campagne" },
     { key: "leads", label: "Leads des campagnes" },
     { key: "spend", label: "Dépense relevée des campagnes" },
   ],

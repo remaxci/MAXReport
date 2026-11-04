@@ -1,7 +1,32 @@
 import { describe, expect, it } from "vitest";
 import { seriesPeriods } from "@/lib/metrics/series";
 import { periodRange } from "@/lib/periods";
-import { knownKeys, shortCategory, stageFunnel, timeRows } from "./chart-data";
+import { knownKeys, rowsByEntity, shortCategory, stageFunnel, timeRows } from "./chart-data";
+
+describe("graphiques par élément suivi", () => {
+  const parents = [
+    { parentId: "fb", values: { clicks: 1074, impressions: 63141 } },
+    { parentId: "li", values: { clicks: 587, impressions: 11711 } },
+    { parentId: "x", values: { clicks: null, impressions: 10 } },
+    { parentId: "ancien", values: { clicks: 5, impressions: null } },
+  ];
+  const names = new Map([["fb", "Facebook"], ["li", "LinkedIn"], ["x", "Sans clics"]]);
+
+  it("du plus grand au plus petit, sans ceux dont la mesure est inconnue", () => {
+    const rows = rowsByEntity(parents, names, (v) => ({ clicks: v.clicks, impressions: v.impressions }), "clicks");
+    expect(rows.map((r) => r.label)).toEqual(["Facebook", "LinkedIn", "Élément supprimé"]);
+    expect(rows[0].values.impressions).toBe(63141);
+  });
+
+  it("un 0 connu reste affiché", () => {
+    expect(rowsByEntity([{ parentId: "fb", values: { clicks: 0 } }], names, (v) => ({ clicks: v.clicks }), "clicks")).toHaveLength(1);
+  });
+
+  it("le calcul reçoit l'identifiant (conversion selon la devise de la campagne)", () => {
+    const rows = rowsByEntity(parents.slice(0, 1), names, (_, id) => ({ clicks: id === "fb" ? 1 : 2 }), "clicks");
+    expect(rows[0].values.clicks).toBe(1);
+  });
+});
 
 describe("noms sur l'axe d'un graphique en barres", () => {
   it("entiers quand la place suffit, raccourcis sur un téléphone", () => {

@@ -16,8 +16,17 @@ export const SERIES_LENGTH: Record<PeriodKind, number> = { week: 13, month: 12, 
  * et le dernier point sont coupés aux bornes de l'intervalle.
  */
 export function rangePoints(period: Period): Period[] {
+  return pointsOfKind(period, defaultPointKind(period));
+}
+
+const POINT_KINDS: readonly PeriodKind[] = ["week", "month", "quarter", "year"];
+
+function defaultPointKind(period: Period): PeriodKind {
   const days = daysInRange(period.start, period.end);
-  const kind: PeriodKind = days <= 92 ? "week" : days <= 732 ? "month" : days <= 2196 ? "quarter" : "year";
+  return days <= 92 ? "week" : days <= 732 ? "month" : days <= 2196 ? "quarter" : "year";
+}
+
+function pointsOfKind(period: Period, kind: PeriodKind): Period[] {
   const points: Period[] = [];
   for (let cursor = period.start; cursor <= period.end; ) {
     const full = periodRange(kind, cursor);
@@ -25,6 +34,22 @@ export function rangePoints(period: Period): Period[] {
     cursor = addDays(full.end, 1);
   }
   return points;
+}
+
+/**
+ * Points d'un intervalle pour des relevés : le découpage s'élargit jusqu'à ce que
+ * chaque relevé compris dans l'intervalle tienne dans un seul point, sans jamais
+ * le répartir au prorata. Au pire, un seul point : l'intervalle entier.
+ */
+export function rangePointsFitting(period: Period, spans: readonly { start: string; end: string }[]): Period[] {
+  const inside = spans.filter((s) => s.start >= period.start && s.end <= period.end);
+  const kinds = POINT_KINDS.slice(POINT_KINDS.indexOf(defaultPointKind(period)));
+  for (const kind of kinds) {
+    const points = pointsOfKind(period, kind);
+    if (points.length === 1) break;
+    if (inside.every((s) => points.some((p) => s.start >= p.start && s.end <= p.end))) return points;
+  }
+  return [period];
 }
 
 /** Périodes de la série, de la plus ancienne à `last` incluse ; pour un intervalle, ses points. */

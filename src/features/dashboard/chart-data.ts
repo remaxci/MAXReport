@@ -46,6 +46,22 @@ export function shortCategory(value: string, count: number, width: number): stri
   return value.length > max ? `${value.slice(0, max - 1).trimEnd()}…` : value;
 }
 
+/**
+ * Lignes d'un graphique par élément suivi (campagne, compte), sur la période
+ * affichée : seuls ceux dont la mesure est connue, du plus grand au plus petit.
+ */
+export function rowsByEntity(
+  parents: readonly { parentId: string; values: Readonly<Record<string, number | null>> }[],
+  names: ReadonlyMap<string, string>,
+  read: (values: Readonly<Record<string, number | null>>, parentId: string) => Record<string, number | null>,
+  measure: string,
+): ChartRow[] {
+  return parents
+    .map((parent) => ({ key: parent.parentId, label: names.get(parent.parentId) ?? "Élément supprimé", values: read(parent.values, parent.parentId) }))
+    .filter((row) => row.values[measure] !== null && row.values[measure] !== undefined)
+    .sort((a, b) => (b.values[measure] as number) - (a.values[measure] as number) || a.label.localeCompare(b.label, "fr"));
+}
+
 /** Lignes d'une série temporelle : une par période, valeurs lues par `read`. */
 export function timeRows(periods: readonly Period[], read: (period: Period, index: number) => Record<string, number | null>): ChartRow[] {
   return periods.map((period, index) => ({ key: period.start, label: pointLabel(period), title: pointTitle(period), values: read(period, index) }));
