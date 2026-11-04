@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pointLabel, pointTitle, rangePoints, seriesPeriods } from "./metrics/series";
+import { pointLabel, pointTitle, rangePoints, rangePointsFitting, seriesPeriods } from "./metrics/series";
 import {
   dateInputValue,
   daysInRange,
@@ -118,5 +118,34 @@ describe("points des graphiques d'un intervalle", () => {
     expect(pointTitle(first)).not.toBe("Janvier 2026");
     expect(pointTitle(first)).toContain("15");
     expect(pointTitle(periodRange("month", "2026-02-10"))).toBe("Février 2026");
+  });
+});
+
+describe("points d'un intervalle pour des relevés", () => {
+  const period = rangePeriod("2026-10-23", "2026-11-30");
+  const dixJours = { start: "2026-10-23", end: "2026-11-01" };
+
+  it("le cas réel : un relevé de 10 jours à cheval sur deux mois donne un seul point, l'intervalle entier", () => {
+    expect(rangePointsFitting(period, [dixJours])).toEqual([period]);
+  });
+
+  it("aucun relevé, ou des relevés qui tiennent : le découpage habituel", () => {
+    expect(rangePointsFitting(period, [])).toEqual(rangePoints(period));
+    const semaine = { start: "2026-11-02", end: "2026-11-08" };
+    expect(rangePointsFitting(period, [semaine])).toEqual(rangePoints(period));
+  });
+
+  it("s'élargit juste assez : des relevés mensuels sur plusieurs mois donnent des mois", () => {
+    const large = rangePeriod("2026-05-01", "2026-07-31");
+    const mensuels = [
+      { start: "2026-05-01", end: "2026-05-31" },
+      { start: "2026-06-01", end: "2026-06-30" },
+    ];
+    const points = rangePointsFitting(large, mensuels);
+    expect(points.map((p) => p.kind)).toEqual(["month", "month", "month"]);
+  });
+
+  it("un relevé qui dépasse l'intervalle ne change pas le découpage : il reste signalé, pas compté", () => {
+    expect(rangePointsFitting(period, [{ start: "2026-10-01", end: "2026-10-31" }])).toEqual(rangePoints(period));
   });
 });

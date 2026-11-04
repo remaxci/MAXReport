@@ -83,6 +83,6 @@ describe("choix enregistré", () => {
     expect(withoutHidden("social", charts, new Set(["social.followers"]))).toEqual([{ key: "audience" }]);
     const social = groups.find((g) => g.key === "social")!;
     expect(isGroupHidden(social, new Set(["social.followers"]))).toBe(false);
-    expect(isGroupHidden(social, new Set(["social.followers", "social.audience"]))).toBe(true);
+    expect(isGroupHidden(social, new Set(["social.accounts", "social.followers", "social.audience"]))).toBe(true);
   });
 });

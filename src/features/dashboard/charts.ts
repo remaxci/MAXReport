@@ -3,7 +3,7 @@ import { listBudgets } from "@/features/budgets/queries";
 import { knownTotal, sumInCurrency } from "@/features/crm/money";
 import { getFxRates } from "@/features/fx/queries";
 import { WEBSITE_CHANNELS, type MarketingKind } from "@/features/marketing/config";
-import { listCampaigns, listSnapshots } from "@/features/marketing/queries";
+import { listCampaigns, listSnapshots, listSocialAccounts } from "@/features/marketing/queries";
 import { evaluateObjectives } from "@/features/objectives/evaluate";
 import { listObjectives } from "@/features/objectives/queries";
 import { PROJECT_STATUS_LABELS } from "@/features/planning/config";
@@ -12,13 +12,14 @@ import { isOverdue, projectProgress } from "@/features/planning/rules";
 import { formatDate, todayIso } from "@/lib/format";
 import { availableMetrics, METRICS, type MetricKey } from "@/lib/metrics/actuals";
 import { convert, type Currency, type FxRate } from "@/lib/metrics/currency";
-import { seriesPeriods } from "@/lib/metrics/series";
+import { ctr } from "@/lib/metrics/formulas";
+import { rangePointsFitting, seriesPeriods } from "@/lib/metrics/series";
 import { rangeLabel, type Period } from "@/lib/periods";
 import { canCompareSellers, sellerRevenueChart } from "@/features/sellers/comparison";
 import { loadSellerComparison } from "@/features/sellers/data";
 import type { BrandSummary } from "@/server/authz/context";
 import { can, type Access, type Permission } from "@/server/authz/permissions";
-import { knownKeys, stageFunnel, timeRows, type Chart } from "./chart-data";
+import { knownKeys, rowsByEntity, stageFunnel, timeRows, type Chart } from "./chart-data";
 import { availableSections, commercialReader, snapshotTotals, type SectionKey } from "./data";
 import { getHistoryCutover, getOpenStages, getOpportunityStages, listHistoricalRows } from "./queries";
 
@@ -191,7 +192,12 @@ async function objectiveCharts(c: Ctx): Promise<Chart[]> {
 // Marketing
 // ---------------------------------------------------------------------
 
-const STRADDLING_NOTE = "Des relevés couvrent plusieurs points du graphique : ils ne sont pas comptés (choisissez un découpage plus large).";
+const STRADDLING_NOTE = "Des relevés couvrent plusieurs points du graphique : ils ne sont pas comptés. Pour les voir, choisissez un découpage plus large ou un intervalle de dates qui les contient.";
+
+/** Points d'un graphique de relevés : sur un intervalle, le découpage s'élargit pour que chaque relevé tienne dans un point. */
+function snapshotPoints(c: Ctx, snapshots: readonly { periodStart: string; periodEnd: string }[]): Period[] {
+  return c.period.kind === "range" ? rangePointsFitting(c.period, snapshots.map((s) => ({ start: s.periodStart, end: s.periodEnd }))) : c.periods;
+}
 
 /**
  * Une mesure des relevés (comptes, campagnes ou sites) sur chaque période : total
@@ -229,10 +235,38 @@ export async function snapshotSeries(
 }
 
 async function socialCharts(c: Ctx): Promise<Chart[]> {
-  const snapshots = await listSnapshots("social", c.brand.id, { from: c.periods[0].start, to: c.period.end });
-  const totals = c.periods.map((p) => snapshotTotals(snapshots, "social", p));
+  const [snapshots, active, archived] = await Promise.all([
+    listSnapshots("social", c.brand.id, { from: c.periods[0].start, to: c.period.end }),
+    listSocialAccounts(c.brand.id, false),
+    listSocialAccounts(c.brand.id, true),
+  ]);
+  const periods = snapshotPoints(c, snapshots);
+  const totals = periods.map((p) => snapshotTotals(snapshots, "social", p));
   const notes = totals.some((t) => t.straddling > 0) ? [STRADDLING_NOTE] : [];
+  const names = new Map([...active, ...archived].map((a) => [a.id, a.name]));
+  const byAccount = rowsByEntity(
+    snapshotTotals(snapshots, "social", c.period).aggregated,
+    names,
+    (v) => ({ followers_new: v.followers_new, interactions: v.interactions }),
+    "followers_new",
+  );
   return [
+    ...(byAccount.length > 0
+      ? [
+          {
+            key: "accounts",
+            title: "Nouveaux abonnés par compte",
+            description: "Période affichée ; les interactions figurent dans le tableau.",
+            kind: "hbar" as const,
+            format: "count" as const,
+            rowHeader: "Compte",
+            series: [{ key: "followers_new", label: "Nouveaux abonnés", color: 1 }],
+            rows: byAccount,
+            extras: [{ key: "interactions", label: "Interactions", format: "count" as const }],
+            notes: [],
+          },
+        ]
+      : []),
     {
       key: "followers",
       title: "Abonnés (tous comptes)",
@@ -240,7 +274,7 @@ async function socialCharts(c: Ctx): Promise<Chart[]> {
       kind: "line",
       format: "count",
       series: [{ key: "followers_total", label: "Abonnés", color: 1 }],
-      rows: timeRows(c.periods, (_, i) => ({ followers_total: totals[i].sum("followers_total") })),
+      rows: timeRows(periods, (_, i) => ({ followers_total: totals[i].sum("followers_total") })),
       notes,
     },
     {
@@ -252,8 +286,8 @@ async function socialCharts(c: Ctx): Promise<Chart[]> {
         { key: "impressions", label: "Impressions", color: 1 },
         { key: "interactions", label: "Interactions", color: 2 },
       ],
-      rows: timeRows(c.periods, (_, i) => ({ impressions: totals[i].sum("impressions"), interactions: totals[i].sum("interactions") })),
-      notes: [],
+      rows: timeRows(periods, (_, i) => ({ impressions: totals[i].sum("impressions"), interactions: totals[i].sum("interactions") })),
+      notes,
     },
   ];
 }
@@ -265,14 +299,35 @@ async function campaignCharts(c: Ctx): Promise<Chart[]> {
     listCampaigns(c.brand.id, true),
   ]);
   const currencies = new Map([...active, ...archived].map((x) => [x.id, x.currency]));
-  const totals = c.periods.map((p) => snapshotTotals(snapshots, "campaign", p));
+  const names = new Map([...active, ...archived].map((x) => [x.id, x.name]));
+  const periods = snapshotPoints(c, snapshots);
+  const totals = periods.map((p) => snapshotTotals(snapshots, "campaign", p));
+  const current = snapshotTotals(snapshots, "campaign", c.period).aggregated;
+  let notConverted = 0;
+  const spendByCampaign = rowsByEntity(
+    current,
+    names,
+    (v, id) => {
+      if (v.spend === null) return { spend: null };
+      const value = convert(v.spend, (currencies.get(id) ?? c.currency) as Currency, c.currency, c.period.end, c.rates);
+      if (value === null) notConverted += 1;
+      return { spend: value };
+    },
+    "spend",
+  );
+  const clicksByCampaign = rowsByEntity(
+    current,
+    names,
+    (v) => ({ clicks: v.clicks, impressions: v.impressions, ctr: ctr(v.clicks, v.impressions) }),
+    "clicks",
+  );
   let excluded = 0;
   const spend = totals.map((t, i) => {
     if (t.sum("spend") === null) return null;
     const sum = sumInCurrency(
       t.aggregated.map((a) => ({ amount: a.values.spend, currency: currencies.get(a.parentId) ?? null })),
       c.currency,
-      c.periods[i].end,
+      periods[i].end,
       c.rates,
     );
     excluded += sum.excluded;
@@ -280,13 +335,48 @@ async function campaignCharts(c: Ctx): Promise<Chart[]> {
   });
   const straddling = totals.some((t) => t.straddling > 0) ? [STRADDLING_NOTE] : [];
   return [
+    ...(spendByCampaign.length > 0 || notConverted > 0
+      ? [
+          {
+            key: "by_campaign_spend",
+            title: "Dépense par campagne",
+            description: "Période affichée.",
+            kind: "hbar" as const,
+            format: "money" as const,
+            currency: c.currency,
+            rowHeader: "Campagne",
+            series: [{ key: "spend", label: "Dépense", color: 1 }],
+            rows: spendByCampaign,
+            notes: notConverted > 0 ? [`${notConverted} dépense(s) exclues faute de taux de change.`] : [],
+          },
+        ]
+      : []),
+    ...(clicksByCampaign.length > 0
+      ? [
+          {
+            key: "by_campaign_clicks",
+            title: "Clics par campagne",
+            description: "Période affichée ; les impressions et le taux de clics figurent dans le tableau.",
+            kind: "hbar" as const,
+            format: "count" as const,
+            rowHeader: "Campagne",
+            series: [{ key: "clicks", label: "Clics", color: 1 }],
+            rows: clicksByCampaign,
+            extras: [
+              { key: "impressions", label: "Impressions", format: "count" as const },
+              { key: "ctr", label: "Taux de clics", format: "percent" as const },
+            ],
+            notes: [],
+          },
+        ]
+      : []),
     {
       key: "leads",
       title: "Leads des campagnes",
       kind: "bar",
       format: "count",
       series: [{ key: "leads", label: "Leads", color: 1 }],
-      rows: timeRows(c.periods, (_, i) => ({ leads: totals[i].sum("leads") })),
+      rows: timeRows(periods, (_, i) => ({ leads: totals[i].sum("leads") })),
       notes: straddling,
     },
     {
@@ -296,7 +386,7 @@ async function campaignCharts(c: Ctx): Promise<Chart[]> {
       format: "money",
       currency: c.currency,
       series: [{ key: "spend", label: "Dépense", color: 1 }],
-      rows: timeRows(c.periods, (_, i) => ({ spend: spend[i] })),
+      rows: timeRows(periods, (_, i) => ({ spend: spend[i] })),
       notes: [...straddling, ...(excluded > 0 ? [`${excluded} dépense(s) exclues faute de taux de change.`] : [])],
     },
   ];
@@ -304,10 +394,11 @@ async function campaignCharts(c: Ctx): Promise<Chart[]> {
 
 async function websiteCharts(c: Ctx): Promise<Chart[]> {
   const snapshots = await listSnapshots("website", c.brand.id, { from: c.periods[0].start, to: c.period.end });
-  const totals = c.periods.map((p) => snapshotTotals(snapshots, "website", p));
+  const periods = snapshotPoints(c, snapshots);
+  const totals = periods.map((p) => snapshotTotals(snapshots, "website", p));
   const notes = totals.some((t) => t.straddling > 0) ? [STRADDLING_NOTE] : [];
   const channels = WEBSITE_CHANNELS.map((m, i) => ({ key: m.key, label: m.label, color: i + 1 }));
-  const rows = timeRows(c.periods, (_, i) => Object.fromEntries(channels.map((ch) => [ch.key, totals[i].sum(ch.key)])));
+  const rows = timeRows(periods, (_, i) => Object.fromEntries(channels.map((ch) => [ch.key, totals[i].sum(ch.key)])));
   const recorded = knownKeys(rows, channels.map((ch) => ch.key));
   if (recorded.length > 0) {
     return [
@@ -331,7 +422,7 @@ async function websiteCharts(c: Ctx): Promise<Chart[]> {
       kind: "bar",
       format: "count",
       series: [{ key: "sessions", label: "Sessions", color: 1 }],
-      rows: timeRows(c.periods, (_, i) => ({ sessions: totals[i].sum("sessions") })),
+      rows: timeRows(periods, (_, i) => ({ sessions: totals[i].sum("sessions") })),
       notes,
     },
   ];

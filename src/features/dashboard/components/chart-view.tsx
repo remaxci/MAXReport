@@ -48,6 +48,8 @@ export function ChartView({ chart }: { chart: Chart }) {
   const config: ChartConfig = Object.fromEntries(chart.series.map((s) => [s.key, { label: s.label, color: seriesColor(s.color) }]));
   const data = chart.rows.map((row) => ({ label: row.label, title: row.title ?? row.label, ...row.values }));
   const empty = !chart.rows.some((row) => chart.series.some((s) => row.values[s.key] !== null && row.values[s.key] !== undefined));
+  // Tout à 0 : un graphique vide n'apprend rien, autant le dire. Une valeur inconnue reste à part.
+  const allZero = !empty && chart.rows.every((row) => chart.series.every((s) => !row.values[s.key]));
   const legend = chart.series.length > 1;
   const tooltip = (
     <ChartTooltip
@@ -76,6 +78,8 @@ export function ChartView({ chart }: { chart: Chart }) {
 
       {empty ? (
         <p className="rounded-lg border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">Aucune donnée sur ces périodes.</p>
+      ) : allZero ? (
+        <p className="rounded-lg border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">Toutes les valeurs sont à 0 sur ces périodes.</p>
       ) : chart.kind === "line" ? (
         <ChartContainer config={config} className="aspect-auto h-60 w-full" role="img" aria-label={`${chart.title} : graphique, valeurs dans le tableau`}>
           <LineChart data={data} margin={{ top: 8, right: 12, left: 4, bottom: 0 }} accessibilityLayer>
