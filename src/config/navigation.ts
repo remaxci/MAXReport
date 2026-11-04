@@ -23,6 +23,7 @@ import {
   Telescope,
   Upload,
   Users,
+  UsersRound,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -67,6 +68,7 @@ export const brandNavigation: NavGroup[] = [
   {
     label: "Commercial",
     items: [
+      { title: "Commerciaux", icon: UsersRound, path: "/commerciaux", permission: ["activities.read_all", "objectives.read_all"] },
       {
         title: "Activités hebdomadaires",
         icon: CalendarCheck,

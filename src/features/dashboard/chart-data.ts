@@ -30,6 +30,8 @@ export type Chart = {
   series: ChartSeries[];
   rows: ChartRow[];
   extras?: ChartColumn[];
+  /** Titre de la première colonne du tableau, si les lignes ne sont pas des périodes. */
+  rowHeader?: string;
   notes: string[];
 };
 

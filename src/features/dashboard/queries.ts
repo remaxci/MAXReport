@@ -61,6 +61,40 @@ export async function getDocumentOutcomes(
   return { sent: rows.length, success: rows.filter((r) => r.statuses?.category === "success").length };
 }
 
+/** Offres envoyées dans la période et abouties, par commercial responsable. */
+export async function getOfferOutcomesByOwner(brandId: string, from: string, to: string): Promise<Map<string, { sent: number; success: number }>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("commercial_documents")
+    .select("owner_id, statuses(category)")
+    .eq("brand_id", brandId)
+    .eq("kind", "offer")
+    .is("archived_at", null)
+    .gte("sent_on", from)
+    .lte("sent_on", to)
+    .limit(20000);
+  if (error) throw error;
+  const outcomes = new Map<string, { sent: number; success: number }>();
+  for (const row of data as unknown as { owner_id: string; statuses: { category: string } | null }[]) {
+    const current = outcomes.get(row.owner_id) ?? { sent: 0, success: 0 };
+    outcomes.set(row.owner_id, { sent: current.sent + 1, success: current.success + (row.statuses?.category === "success" ? 1 : 0) });
+  }
+  return outcomes;
+}
+
+/** Graphiques que la personne connectée a masqués sur le tableau de bord de cette marque. */
+export async function getHiddenCharts(brandId: string, userId: string): Promise<string[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("dashboard_chart_preferences")
+    .select("hidden")
+    .eq("brand_id", brandId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.hidden ?? [];
+}
+
 /** Opportunités en cours, avec la probabilité de leur étape (pipeline pondéré). */
 export async function getOpenPipeline(brandId: string): Promise<{ amount: number | null; currency: string | null; probability: number }[]> {
   const supabase = await createClient();

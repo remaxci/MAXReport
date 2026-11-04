@@ -75,12 +75,26 @@ export function directionWorkbook(
   rows: DirectionRow[],
   total: DirectionRow,
 ): ExcelJS.Workbook {
+  return tableWorkbook({ sheet: "Vue Direction", title: "Vue Direction consolidée", subtitle, firstColumn: "Marque", columns, rows, total });
+}
+
+/** Un tableau : une ligne par entité, puis le total. */
+export function tableWorkbook(input: {
+  sheet: string;
+  title: string;
+  subtitle: string;
+  firstColumn: string;
+  columns: DirectionColumn[];
+  rows: DirectionRow[];
+  total: DirectionRow;
+}): ExcelJS.Workbook {
+  const { columns, rows, total } = input;
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "MAXreport";
-  const sheet = workbook.addWorksheet("Vue Direction");
+  const sheet = workbook.addWorksheet(input.sheet);
   sheet.columns = [{ width: 28 }, ...columns.map(() => ({ width: 18 })), { width: 60 }];
-  header(sheet, "Vue Direction consolidée", subtitle);
-  sheet.addRow(["Marque", ...columns.map((c) => c.label), "Remarques"]).font = { bold: true };
+  header(sheet, input.title, input.subtitle);
+  sheet.addRow([input.firstColumn, ...columns.map((c) => c.label), "Remarques"]).font = { bold: true };
   for (const r of [...rows, total]) {
     const row = sheet.addRow([r.label, ...columns.map((c) => r.values[c.key] ?? null), r.notes.join(" ")]);
     columns.forEach((c, i) => (row.getCell(i + 2).numFmt = NUMBER_FORMATS[c.format]));
