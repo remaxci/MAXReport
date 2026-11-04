@@ -235,7 +235,7 @@ async function Direction({ slug, query }: { slug: string; query: Query }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Marque</TableHead>
+                <TableHead className="sticky left-0 z-10 bg-card">Marque</TableHead>
                 {DIRECTION_COLUMNS.map((c) => (
                   <TableHead key={c.key} className="text-right whitespace-normal">
                     {c.label}
@@ -246,7 +246,7 @@ async function Direction({ slug, query }: { slug: string; query: Query }) {
             <TableBody>
               {[...rows, total].map((row) => (
                 <TableRow key={row.label} className={row === total ? "font-semibold" : undefined}>
-                  <TableCell>{row.label}</TableCell>
+                  <TableCell className="sticky left-0 z-10 bg-card">{row.label}</TableCell>
                   {DIRECTION_COLUMNS.map((c) => (
                     <TableCell key={c.key} className="text-right tabular-nums">
                       {formatKpi({ value: row.values[c.key] ?? null, format: c.format, currency: "XOF" })}

@@ -95,7 +95,7 @@ function SellersTable({ comparison, sort, base, period }: { comparison: LoadedCo
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Commercial</TableHead>
+              <TableHead className="sticky left-0 z-10 bg-card">Commercial</TableHead>
               {comparison.columns.map((column) => (
                 <TableHead key={column.key} className="text-right whitespace-normal" aria-sort={column.key === sort ? "descending" : undefined}>
                   <Link
@@ -111,7 +111,7 @@ function SellersTable({ comparison, sort, base, period }: { comparison: LoadedCo
           <TableBody>
             {[...rows, comparison.total].map((row) => (
               <TableRow key={row.id} className={row === comparison.total ? "font-semibold" : undefined}>
-                <TableCell className={row === comparison.total ? undefined : "font-medium"}>{row.label}</TableCell>
+                <TableCell className={cn("sticky left-0 z-10 bg-card", row !== comparison.total && "font-medium")}>{row.label}</TableCell>
                 {comparison.columns.map((column) => (
                   <TableCell key={column.key} className="text-right tabular-nums">
                     {formatKpi({ value: row.values[column.key] ?? null, format: column.format, currency: comparison.currency })}

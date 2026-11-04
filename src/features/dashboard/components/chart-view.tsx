@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import {
   ChartContainer,
@@ -10,7 +11,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { Chart, ChartColumn } from "../chart-data";
+import { shortCategory, type Chart, type ChartColumn } from "../chart-data";
 import { formatKpi } from "../format";
 
 // Rendu d'un graphique : une seule échelle, marques fines, info-bulle au
@@ -32,13 +33,18 @@ const hbarHeight = (rows: number) => Math.max(120, rows * 36 + 40);
 
 const seriesColor = (color: number | "muted") => (color === "muted" ? "var(--muted-foreground)" : `var(--chart-${color})`);
 
-/** Nom raccourci sur l'axe selon le nombre de catégories ; le nom complet reste dans l'info-bulle et le tableau. */
-function categoryTick(count: number) {
-  const max = count > 6 ? 8 : count > 4 ? 12 : 20;
-  return (value: string) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
-}
-
 export function ChartView({ chart }: { chart: Chart }) {
+  // Largeur réelle du graphique : c'est elle qui décide de la longueur des noms sur l'axe.
+  const figure = useRef<HTMLElement>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const node = figure.current;
+    if (!node) return;
+    const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   const config: ChartConfig = Object.fromEntries(chart.series.map((s) => [s.key, { label: s.label, color: seriesColor(s.color) }]));
   const data = chart.rows.map((row) => ({ label: row.label, title: row.title ?? row.label, ...row.values }));
   const empty = !chart.rows.some((row) => chart.series.some((s) => row.values[s.key] !== null && row.values[s.key] !== undefined));
@@ -62,7 +68,7 @@ export function ChartView({ chart }: { chart: Chart }) {
   );
 
   return (
-    <figure className="flex min-w-0 flex-col gap-2 break-inside-avoid">
+    <figure ref={figure} className="flex min-w-0 flex-col gap-2 break-inside-avoid">
       <figcaption className="flex flex-col gap-0.5">
         <span className="text-sm font-medium">{chart.title}</span>
         {chart.description && <span className="text-xs text-muted-foreground">{chart.description}</span>}
@@ -115,7 +121,7 @@ export function ChartView({ chart }: { chart: Chart }) {
           <BarChart data={data} margin={{ top: 8, right: 12, left: 4, bottom: 0 }} barGap={2} accessibilityLayer>
             <CartesianGrid vertical={false} />
             {chart.rowHeader ? (
-              <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} interval={0} tickFormatter={categoryTick(data.length)} />
+              <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} interval={0} tickFormatter={(value: string) => shortCategory(value, data.length, width)} />
             ) : (
               <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} minTickGap={12} />
             )}
