@@ -35,7 +35,7 @@ async function Sellers({ slug, query }: { slug: string; query: Query }) {
   if (!brand) notFound();
   if (!canCompareSellers(ctx.access, brand.id)) return <Forbidden />;
 
-  const period = periodFromQuery(first(query.periode), first(query.du), todayIso());
+  const period = periodFromQuery(first(query.periode), first(query.du), todayIso(), "month", first(query.au));
   const view = readDashboardView(first(query.vue));
   const comparison = await loadSellerComparison({ brand, access: ctx.access, period });
   const sort = readSellerSort(first(query.tri), comparison.columns);

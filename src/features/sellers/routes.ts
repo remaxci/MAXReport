@@ -13,7 +13,7 @@ export async function exportSellers(request: Request, slug: string): Promise<Res
   if (!brand) return new Response("Page introuvable.", { status: 404 });
   if (!canCompareSellers(ctx.access, brand.id)) return new Response("Accès refusé.", { status: 403 });
   const query = new URL(request.url).searchParams;
-  const period = periodFromQuery(query.get("periode") ?? undefined, query.get("du") ?? undefined, todayIso());
+  const period = periodFromQuery(query.get("periode") ?? undefined, query.get("du") ?? undefined, todayIso(), "month", query.get("au") ?? undefined);
   const comparison = await loadSellerComparison({ brand, access: ctx.access, period });
   const sort = readSellerSort(query.get("tri") ?? undefined, comparison.columns);
   const toRow = (r: (typeof comparison.rows)[number]) => ({ label: r.label, values: r.values, notes: [] });

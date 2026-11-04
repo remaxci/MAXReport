@@ -26,7 +26,7 @@ import {
   isIsoDate,
   isoWeekStart,
   mondaysBetween,
-  parsePeriodKind,
+  periodFromQuery,
   periodLabel,
   periodRange,
   PERIOD_SLUGS,
@@ -321,9 +321,8 @@ async function TeamPage({ slug, query }: { slug: string; query: Query }) {
 
 async function Team({ ctx, brand, query }: { ctx: AuthContext; brand: BrandSummary; query: Query }) {
   const today = todayIso();
-  const kind = parsePeriodKind(first(query.periode), "week");
-  const anchor = first(query.du);
-  const period: Period = periodRange(kind, isIsoDate(anchor) ? anchor : today);
+  const period: Period = periodFromQuery(first(query.periode), first(query.du), today, "week", first(query.au));
+  const kind = period.kind;
   const base = `/m/${brand.slug}/activites`;
   const own = can(ctx.access, "activities.manage_own", brand.id);
   const canValidate = can(ctx.access, "activities.validate", brand.id);

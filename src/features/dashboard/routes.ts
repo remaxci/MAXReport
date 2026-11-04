@@ -30,7 +30,7 @@ export async function exportDashboard(request: Request, slug: string): Promise<R
     sections = template.sections;
     kindFallback = template.periodKind;
   }
-  const period = periodFromQuery(query.get("periode") ?? undefined, query.get("du") ?? undefined, todayIso(), kindFallback);
+  const period = periodFromQuery(query.get("periode") ?? undefined, query.get("du") ?? undefined, todayIso(), kindFallback, query.get("au") ?? undefined);
   const data = await loadDashboard({ brand, access: ctx.access, period, sections });
   const workbook = sectionsWorkbook(title, `Période : ${periodLabel(period)}`, data);
   return workbookResponse(workbook, `MAXreport-${brand.code}-${period.start}.xlsx`);
@@ -41,7 +41,7 @@ export async function exportDirection(request: Request, slug: string): Promise<R
   if (!findBrand(ctx, slug)) return new Response("Page introuvable.", { status: 404 });
   if (!can(ctx.access, "direction.read")) return new Response("Accès refusé.", { status: 403 });
   const query = new URL(request.url).searchParams;
-  const period = periodFromQuery(query.get("periode") ?? undefined, query.get("du") ?? undefined, todayIso());
+  const period = periodFromQuery(query.get("periode") ?? undefined, query.get("du") ?? undefined, todayIso(), "month", query.get("au") ?? undefined);
   const { rows, total } = await loadDirection(ctx.brands.filter((b) => b.isActive), ctx.access, period);
   const workbook = directionWorkbook(`Période : ${periodLabel(period)} · montants en XOF`, DIRECTION_COLUMNS, rows, total);
   return workbookResponse(workbook, `MAXreport-Direction-${period.start}.xlsx`);
