@@ -12,6 +12,16 @@ export function formatMoney(amount: number | null, currency: string | null): str
   return format ? format.format(amount) : `${amount} ${currency}`;
 }
 
+/**
+ * Sépare un montant affiché de sa devise (« 86 000 000 F CFA ») : sur un petit
+ * écran, la devise passe à la ligne plutôt que de déborder. Un pourcentage, une
+ * valeur inconnue ou un simple nombre restent entiers.
+ */
+export function splitAmount(text: string): { amount: string; unit: string | null } {
+  const match = text.match(/^(.*\d)[\s\u00a0\u202f]+(\D*[^\s\u00a0\u202f%\d]\D*)$/u);
+  return match ? { amount: match[1], unit: match[2] } : { amount: text, unit: null };
+}
+
 const DATE = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 const DATE_TIME = new Intl.DateTimeFormat("fr-FR", {
   day: "numeric",

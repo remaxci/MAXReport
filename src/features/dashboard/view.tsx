@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { FileSpreadsheet } from "lucide-react";
+import { AmountText } from "@/components/amount-text";
 import { periodSearch, type Period } from "@/lib/periods";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -17,9 +18,11 @@ export { formatKpi } from "./format";
 function KpiTile({ kpi }: { kpi: Kpi }) {
   const change = kpiEvolution(kpi);
   return (
-    <div className="flex flex-col gap-1 rounded-lg border p-3 break-inside-avoid">
+    <div className="flex min-w-0 flex-col gap-1 rounded-lg border p-3 break-inside-avoid">
       <span className="text-xs text-muted-foreground">{kpi.label}</span>
-      <span className="text-xl font-semibold tabular-nums">{formatKpi(kpi)}</span>
+      <span className="text-xl font-semibold tabular-nums [overflow-wrap:anywhere]">
+        <AmountText value={formatKpi(kpi)} />
+      </span>
       {change && <span className="text-xs text-muted-foreground">vs période préc. {change}</span>}
       {kpi.hint && <span className="text-xs text-muted-foreground">{kpi.hint}</span>}
     </div>

@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { AmountText } from "@/components/amount-text";
 import { dateInputValue, PERIOD_KINDS, PERIOD_LABELS, PERIOD_SLUGS, periodLabel, periodSearch, RANGE_SLUG, shiftPeriod, type Period } from "@/lib/periods";
 import { cn } from "@/lib/utils";
 import { REPORT_STATUS_LABELS, type ReportStatus } from "./queries";
@@ -121,9 +122,11 @@ export { formatMetric } from "@/lib/metrics/actuals";
 export function MetricTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <Card size="sm">
-      <CardContent className="flex flex-col gap-1">
+      <CardContent className="flex min-w-0 flex-col gap-1">
         <span className="text-xs text-muted-foreground">{label}</span>
-        <span className="text-xl font-semibold tabular-nums">{value}</span>
+        <span className="text-xl font-semibold tabular-nums [overflow-wrap:anywhere]">
+          <AmountText value={value} />
+        </span>
         {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
       </CardContent>
     </Card>

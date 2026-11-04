@@ -1,7 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { seriesPeriods } from "@/lib/metrics/series";
 import { periodRange } from "@/lib/periods";
-import { knownKeys, stageFunnel, timeRows } from "./chart-data";
+import { knownKeys, shortCategory, stageFunnel, timeRows } from "./chart-data";
+
+describe("noms sur l'axe d'un graphique en barres", () => {
+  it("entiers quand la place suffit, raccourcis sur un téléphone", () => {
+    expect(shortCategory("Aminata K. (démo)", 4, 560)).toBe("Aminata K. (démo)");
+    expect(shortCategory("Aminata K. (démo)", 4, 311)).toBe("Aminata…");
+    expect(shortCategory("Yao S. (démo)", 4, 311)).toBe("Yao S.…");
+  });
+
+  it("jamais moins de quatre caractères, même nombreux ; largeur inconnue au premier affichage", () => {
+    expect(shortCategory("Aminata K. (démo)", 20, 311)).toBe("Ami…");
+    expect(shortCategory("Aminata K. (démo)", 4, 0)).toBe("Aminata K. (démo)");
+  });
+});
 
 describe("données des graphiques", () => {
   it("une ligne par période, libellés courts et complets", () => {

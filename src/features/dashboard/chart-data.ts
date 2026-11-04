@@ -35,6 +35,17 @@ export type Chart = {
   notes: string[];
 };
 
+/**
+ * Nom d'une catégorie sur l'axe d'un graphique en barres : assez court pour que
+ * les noms ne se chevauchent pas à la largeur réelle du graphique. Le nom complet
+ * reste dans l'info-bulle et le tableau des valeurs.
+ */
+export function shortCategory(value: string, count: number, width: number): string {
+  const available = width > 0 ? width - 60 : 480;
+  const max = Math.max(4, Math.floor(available / Math.max(count, 1) / 7));
+  return value.length > max ? `${value.slice(0, max - 1).trimEnd()}…` : value;
+}
+
 /** Lignes d'une série temporelle : une par période, valeurs lues par `read`. */
 export function timeRows(periods: readonly Period[], read: (period: Period, index: number) => Record<string, number | null>): ChartRow[] {
   return periods.map((period, index) => ({ key: period.start, label: pointLabel(period), title: pointTitle(period), values: read(period, index) }));
