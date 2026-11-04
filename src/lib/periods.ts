@@ -1,6 +1,6 @@
 // Périodes de reporting : semaine ISO (du lundi au dimanche), mois, trimestre,
-// année. Dates au format AAAA-MM-JJ ; Abidjan étant à UTC+0, tout se calcule
-// en UTC.
+// année, ou intervalle libre (du… au…). Dates au format AAAA-MM-JJ ; Abidjan
+// étant à UTC+0, tout se calcule en UTC.
 
 import { addDays, formatDate } from "@/lib/format";
 
@@ -22,7 +22,13 @@ export const PERIOD_SLUGS: Record<PeriodKind, string> = {
   year: "annee",
 };
 
-export type Period = { kind: PeriodKind; start: string; end: string };
+/** Valeur du paramètre d'URL `periode` pour un intervalle libre (?periode=intervalle&du=…&au=…). */
+export const RANGE_SLUG = "intervalle";
+
+export type Period = { kind: PeriodKind | "range"; start: string; end: string };
+
+/** Un intervalle ne dépasse pas dix ans : au-delà, il est ramené à cette durée. */
+export const MAX_RANGE_DAYS = 3660;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const DAY_MS = 86_400_000;
@@ -36,6 +42,34 @@ export function isIsoDate(value: string | null | undefined): value is string {
 
 function toDate(value: string): Date {
   return new Date(`${value}T00:00:00Z`);
+}
+
+/** Date saisie, au format JJ/MM/AAAA ou AAAA-MM-JJ ; null si elle n'existe pas. */
+export function parseDateInput(value: string | null | undefined): string | null {
+  const text = value?.trim();
+  if (!text) return null;
+  if (ISO_DATE.test(text)) return isIsoDate(text) ? text : null;
+  const match = text.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/);
+  if (!match) return null;
+  const iso = `${match[3]}-${match[2].padStart(2, "0")}-${match[1].padStart(2, "0")}`;
+  return isIsoDate(iso) ? iso : null;
+}
+
+/** Date AAAA-MM-JJ affichée dans un champ de saisie : JJ/MM/AAAA. */
+export function dateInputValue(date: string): string {
+  const [year, month, day] = date.split("-");
+  return `${day}/${month}/${year}`;
+}
+
+/** Nombre de jours de l'intervalle, bornes comprises. */
+export function daysInRange(start: string, end: string): number {
+  return Math.round((toDate(end).getTime() - toDate(start).getTime()) / DAY_MS) + 1;
+}
+
+/** Intervalle libre. Des bornes inversées sont remises dans l'ordre ; la durée est plafonnée. */
+export function rangePeriod(first: string, second: string): Period {
+  const [start, end] = first <= second ? [first, second] : [second, first];
+  return { kind: "range", start, end: daysInRange(start, end) > MAX_RANGE_DAYS ? addDays(start, MAX_RANGE_DAYS - 1) : end };
 }
 
 function utc(year: number, month: number, day: number): string {
@@ -81,6 +115,10 @@ export function periodRange(kind: PeriodKind, date: string): Period {
 
 /** Période précédente (delta < 0) ou suivante (delta > 0). */
 export function shiftPeriod(period: Period, delta: number): Period {
+  if (period.kind === "range") {
+    const days = daysInRange(period.start, period.end) * delta;
+    return { kind: "range", start: addDays(period.start, days), end: addDays(period.end, days) };
+  }
   const d = toDate(period.start);
   const year = d.getUTCFullYear();
   const month = d.getUTCMonth();
@@ -101,6 +139,7 @@ export function shiftPeriod(period: Period, delta: number): Period {
  * (même jour de la semaine), ou le même mois, trimestre, année.
  */
 export function sameLastYear(period: Period): Period {
+  if (period.kind === "range") return { kind: "range", start: addDays(period.start, -364), end: addDays(period.end, -364) };
   if (period.kind === "week") return periodRange("week", addDays(period.start, -364));
   const d = toDate(period.start);
   return periodRange(period.kind, utc(d.getUTCFullYear() - 1, d.getUTCMonth(), 1));
@@ -109,10 +148,12 @@ export function sameLastYear(period: Period): Period {
 const MONTH_YEAR = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric", timeZone: "UTC" });
 const DAY_MONTH = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" });
 
-/** « Semaine 45 · 2 nov. – 8 nov. 2026 », « novembre 2026 », « T4 2026 », « 2026 ». */
+/** « Semaine 45 · 2 nov. – 8 nov. 2026 », « novembre 2026 », « T4 2026 », « 2026 », « 10 sept. 2026 – 20 oct. 2026 ». */
 export function periodLabel(period: Period): string {
   const d = toDate(period.start);
   switch (period.kind) {
+    case "range":
+      return rangeLabel(period.start, period.end);
     case "week":
       return `Semaine ${isoWeek(period.start).week} · ${DAY_MONTH.format(d)} – ${formatDate(period.end)}`;
     case "month":
@@ -153,12 +194,21 @@ export function elapsedShare(start: string, end: string, today: string): number 
   return elapsed / total;
 }
 
-/** Période d'une adresse (?periode=mois&du=AAAA-MM-JJ), le jour donné par défaut. */
-export function periodFromQuery(kind: string | undefined, anchor: string | undefined, today: string, fallback: PeriodKind = "month"): Period {
-  return periodRange(parsePeriodKind(kind, fallback), isIsoDate(anchor) ? anchor : today);
+/**
+ * Période d'une adresse (?periode=mois&du=AAAA-MM-JJ, ou ?periode=intervalle&du=…&au=…),
+ * le jour donné par défaut. Un intervalle incomplet ou invalide redonne la période par défaut.
+ */
+export function periodFromQuery(kind: string | undefined, anchor: string | undefined, today: string, fallback: PeriodKind = "month", until?: string): Period {
+  const start = parseDateInput(anchor);
+  if (kind === RANGE_SLUG) {
+    const end = parseDateInput(until);
+    if (start && end) return rangePeriod(start, end);
+  }
+  return periodRange(parsePeriodKind(kind, fallback), start ?? today);
 }
 
-/** Paramètres d'adresse d'une période : « periode=mois&du=2026-11-01 ». */
+/** Paramètres d'adresse d'une période : « periode=mois&du=2026-11-01 », « periode=intervalle&du=…&au=… ». */
 export function periodSearch(period: Period): string {
+  if (period.kind === "range") return `periode=${RANGE_SLUG}&du=${period.start}&au=${period.end}`;
   return `periode=${PERIOD_SLUGS[period.kind]}&du=${period.start}`;
 }

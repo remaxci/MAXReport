@@ -19,8 +19,7 @@ import { getFxRates } from "@/features/fx/queries";
 import { cpl, ctr, conversionRate, engagementRate, ratio } from "@/lib/metrics/formulas";
 import { aggregateSnapshots, evolution, type Aggregated } from "@/lib/metrics/snapshots";
 import {
-  isIsoDate,
-  parsePeriodKind,
+  periodFromQuery,
   PERIOD_KINDS,
   periodRange,
   rangeLabel,
@@ -91,8 +90,7 @@ async function loadBrand(slug: string, kind: MarketingKind) {
 }
 
 function readPeriod(query: Query, today: string): Period {
-  const anchor = first(query.du);
-  return periodRange(parsePeriodKind(first(query.periode), "month"), isIsoDate(anchor) ? anchor : today);
+  return periodFromQuery(first(query.periode), first(query.du), today, "month", first(query.au));
 }
 
 /** Objet suivi, ramené à ce qu'affichent les listes et en-têtes. */
@@ -653,7 +651,7 @@ async function MarketingDetail({ kind, slug, id, query }: { kind: MarketingKind;
               extraMeasures={config.extraMeasures}
               extraTitle={kind === "website" ? "Sessions par canal d'acquisition" : undefined}
               currency={kind === "campaign" ? currency : undefined}
-              defaults={{ periodKind: period.kind, anchor: period.start, periodStart: period.start, periodEnd: period.end, values: {}, comments: "" }}
+              defaults={{ periodKind: period.kind === "range" ? "custom" : period.kind, anchor: period.start, periodStart: period.start, periodEnd: period.end, values: {}, comments: "" }}
               submitLabel="Enregistrer le relevé"
             />
           </CardContent>

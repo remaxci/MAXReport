@@ -121,7 +121,7 @@ async function Report({ slug, id, query }: { slug: string; id: string; query: Re
   const template = await getTemplate(brand.id, id);
   if (!template) notFound();
 
-  const period = periodFromQuery(first(query.periode), first(query.du), todayIso(), template.periodKind);
+  const period = periodFromQuery(first(query.periode), first(query.du), todayIso(), template.periodKind, first(query.au));
   const sections = await loadDashboard({ brand, access: ctx.access, period, sections: template.sections });
   const base = `/m/${brand.slug}/rapports/${template.id}`;
   const hidden = template.sections.filter((s) => !sections.some((x) => x.key === s));

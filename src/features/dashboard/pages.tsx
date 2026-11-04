@@ -28,7 +28,7 @@ type Query = Record<string, string | string[] | undefined>;
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
 function readPeriod(query: Query): Period {
-  return periodFromQuery(first(query.periode), first(query.du), todayIso());
+  return periodFromQuery(first(query.periode), first(query.du), todayIso(), "month", first(query.au));
 }
 
 // =====================================================================
