@@ -400,6 +400,11 @@ Une valeur non saisie reste vide. Un ratio dont un terme manque, ou dont le dén
 
 Ces formules vivent dans `src/lib/metrics` et sont couvertes par des tests automatisés.
 
+### Totaux sur des chiffres incomplets
+
+- **Taux d'un total** (taux de clics, coût par lead, taux d'engagement, taux de conversion) : seules comptent les lignes où les deux mesures sont connues, et les lignes écartées sont signalées. Des clics sans leurs impressions ne gonflent jamais un taux.
+- **Total en devise** : si aucun montant n'a pu être converti faute de taux, il s'affiche « — », jamais 0. Une somme partielle reste affichée, avec les montants exclus signalés.
+
 ### Éviter les doubles comptages
 
 1. **Activités déclarées et dossiers CRM.** Chaque indicateur commercial a une seule source, déterminée par les modules actifs de la marque (fonction `metric_actuals`) :

@@ -57,7 +57,7 @@ import {
   type OpportunityDefaults,
 } from "./components/forms";
 import { getFxRates } from "@/features/fx/queries";
-import { sumInCurrency } from "./money";
+import { knownTotal, sumInCurrency } from "./money";
 import {
   getCompany,
   getContract,
@@ -543,7 +543,7 @@ async function Opportunities({ slug, query }: { slug: string; query: Record<stri
     <Page>
       <PageHeader
         title="Opportunités"
-        description={`${brand.name} · pipeline pondéré : ${formatMoney(weighted.total, target)}${weighted.excluded ? ` (hors ${weighted.excluded} montant(s) sans taux de change)` : ""}${access.readAll ? "" : " · vos opportunités"}`}
+        description={`${brand.name} · pipeline pondéré : ${formatMoney(knownTotal(weighted), target)}${weighted.excluded ? ` (hors ${weighted.excluded} montant(s) sans taux de change)` : ""}${access.readAll ? "" : " · vos opportunités"}`}
       >
         {access.canCreate && (
           <Button nativeButton={false} render={<Link href={`${base}/nouvelle`} />}>
@@ -570,7 +570,7 @@ async function Opportunities({ slug, query }: { slug: string; query: Record<stri
                   <Badge variant="outline">{items.length}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {formatMoney(total.total, target)} · {stage.probability} %
+                  {formatMoney(knownTotal(total), target)} · {stage.probability} %
                 </p>
               </header>
               {items.map((o) => (
@@ -850,7 +850,7 @@ async function Contracts({ slug, query }: { slug: string; query: Record<string, 
     <Page>
       <PageHeader
         title="Contrats signés"
-        description={`${brand.name} · ${contracts.length} contrat(s) · ${formatMoney(total.total, target)}${total.excluded ? ` (hors ${total.excluded} montant(s) sans taux de change)` : ""}${access.readAll ? "" : " · vos contrats"}`}
+        description={`${brand.name} · ${contracts.length} contrat(s) · ${formatMoney(knownTotal(total), target)}${total.excluded ? ` (hors ${total.excluded} montant(s) sans taux de change)` : ""}${access.readAll ? "" : " · vos contrats"}`}
       >
         {access.canCreate && (
           <Button nativeButton={false} render={<Link href={`${base}/nouveau`} />}>

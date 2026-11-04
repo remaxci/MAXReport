@@ -21,3 +21,11 @@ export function sumInCurrency(
   }
   return { total, excluded };
 }
+
+/**
+ * Total à afficher : inconnu (null) quand aucun montant n'a pu être converti.
+ * Une somme partielle reste affichée, avec les montants exclus signalés à côté.
+ */
+export function knownTotal(sum: { total: number; excluded: number }): number | null {
+  return sum.excluded > 0 && sum.total === 0 ? null : sum.total;
+}

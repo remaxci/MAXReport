@@ -1,7 +1,7 @@
 import { getActuals } from "@/features/activities/queries";
 import { evaluateBudget, loadBudgetData } from "@/features/budgets/evaluate";
 import { listBudgets } from "@/features/budgets/queries";
-import { sumInCurrency } from "@/features/crm/money";
+import { knownTotal, sumInCurrency } from "@/features/crm/money";
 import { getFxRates } from "@/features/fx/queries";
 import { aggregationFields, KINDS, type MarketingKind } from "@/features/marketing/config";
 import { listCampaigns, listSnapshots } from "@/features/marketing/queries";
@@ -11,7 +11,7 @@ import { OBJECTIVE_STATUS_LABELS, type ObjectiveStatus } from "@/features/object
 import { formatDate, todayIso } from "@/lib/format";
 import { availableMetrics, formatMetric, knownActual, METRICS, type MetricKey } from "@/lib/metrics/actuals";
 import { convert, type Currency, type FxRate } from "@/lib/metrics/currency";
-import { conversionRate, cpl, ctr, ratio } from "@/lib/metrics/formulas";
+import { cpl, pairedRatio, ratio } from "@/lib/metrics/formulas";
 import { combineParts, historicalTeamTotal, splitAtCutover, type HistoricalRow } from "@/lib/metrics/history";
 import { aggregateSnapshots } from "@/lib/metrics/snapshots";
 import { rangeLabel, shiftPeriod, type Period } from "@/lib/periods";
@@ -207,7 +207,7 @@ async function commercial(c: Ctx): Promise<Section> {
     kpis.push({
       key: "weighted_pipeline",
       label: "Pipeline pondéré (en cours)",
-      value: weighted.total,
+      value: knownTotal(weighted),
       previous: null,
       format: "money",
       currency,
@@ -271,6 +271,9 @@ async function marketing(c: Ctx, kind: "social" | "website"): Promise<Section> {
   const now = snapshotTotals(snapshots, kind, c.period);
   const before = snapshotTotals(snapshots, kind, c.previous);
   const count = (key: string, label: string): Kpi => ({ key, label, value: now.sum(key), previous: before.sum(key), format: "count" });
+  const rate = kind === "social" ? (["interactions", "impressions"] as const) : (["conversions", "sessions"] as const);
+  const rateOf = (t: typeof now) => pairedRatio(t.aggregated.map((a) => a.values), rate[0], rate[1], 100);
+  const rateNow = rateOf(now);
   const kpis: Kpi[] =
     kind === "social"
       ? [
@@ -281,8 +284,8 @@ async function marketing(c: Ctx, kind: "social" | "website"): Promise<Section> {
           {
             key: "engagement",
             label: "Taux d'engagement (sur impressions)",
-            value: ratio(now.sum("interactions"), now.sum("impressions"), 100),
-            previous: ratio(before.sum("interactions"), before.sum("impressions"), 100),
+            value: rateNow.value,
+            previous: rateOf(before).value,
             format: "percent",
           },
         ]
@@ -293,13 +296,20 @@ async function marketing(c: Ctx, kind: "social" | "website"): Promise<Section> {
           {
             key: "conversion_rate",
             label: "Taux de conversion",
-            value: conversionRate(now.sum("conversions"), now.sum("sessions")),
-            previous: conversionRate(before.sum("conversions"), before.sum("sessions")),
+            value: rateNow.value,
+            previous: rateOf(before).value,
             format: "percent",
           },
         ];
   const notes: string[] = [];
   if (now.straddling > 0) notes.push(`${now.straddling} relevé(s) à cheval sur la période ne sont pas comptés.`);
+  if (rateNow.left > 0) {
+    notes.push(
+      kind === "social"
+        ? `Taux d'engagement : ${rateNow.left} compte(s) sans interactions ou sans impressions ne sont pas comptés.`
+        : `Taux de conversion : ${rateNow.left} site(s) sans conversions ou sans sessions ne sont pas comptés.`,
+    );
+  }
   if (now.aggregated.every((a) => a.counted === 0)) notes.push(`Aucun relevé ${kind === "social" ? "social" : "de site"} sur la période.`);
   return { key: kind === "social" ? "social" : "websites", title: KINDS[kind].title, kpis, notes };
 }
@@ -323,37 +333,49 @@ async function campaigns(c: Ctx): Promise<Section> {
   const spend = spendOf(now, c.period);
   const spendBefore = spendOf(before, c.previous);
   const hasSpend = now.sum("spend") !== null;
-  const leads = now.sum("leads");
+  // Coût par lead : la dépense des seules campagnes dont les leads sont connus.
+  const withLeads = now.aggregated.filter((a) => a.values.leads !== null && a.values.spend !== null);
+  const leadSpend = sumInCurrency(
+    withLeads.map((a) => ({ amount: a.values.spend, currency: currencies.get(a.parentId) ?? null })),
+    c.currency,
+    c.period.end,
+    c.rates,
+  );
+  const leadCount = withLeads.reduce((n, a) => n + (a.values.leads ?? 0), 0);
+  const clickRate = pairedRatio(now.aggregated.map((a) => a.values), "clicks", "impressions", 100);
   const kpis: Kpi[] = [
     {
       key: "spend",
       label: "Dépense relevée",
-      value: hasSpend ? spend.total : null,
-      previous: before.sum("spend") !== null ? spendBefore.total : null,
+      value: hasSpend ? knownTotal(spend) : null,
+      previous: before.sum("spend") !== null ? knownTotal(spendBefore) : null,
       format: "money",
       currency: c.currency,
     },
     { key: "impressions", label: "Impressions", value: now.sum("impressions"), previous: before.sum("impressions"), format: "count" },
     { key: "clicks", label: "Clics", value: now.sum("clicks"), previous: before.sum("clicks"), format: "count" },
-    { key: "leads", label: "Leads", value: leads, previous: before.sum("leads"), format: "count" },
+    { key: "leads", label: "Leads", value: now.sum("leads"), previous: before.sum("leads"), format: "count" },
     {
       key: "ctr",
       label: "Taux de clics",
-      value: ctr(now.sum("clicks"), now.sum("impressions")),
-      previous: ctr(before.sum("clicks"), before.sum("impressions")),
+      value: clickRate.value,
+      previous: pairedRatio(before.aggregated.map((a) => a.values), "clicks", "impressions", 100).value,
       format: "percent",
     },
     {
       key: "cpl",
       label: "Coût par lead",
-      value: hasSpend && spend.excluded === 0 ? cpl(spend.total, leads) : null,
+      value: withLeads.length > 0 && leadSpend.excluded === 0 ? cpl(leadSpend.total, leadCount) : null,
       previous: null,
       format: "money",
       currency: c.currency,
     },
   ];
   const notes: string[] = [];
-  if (spend.excluded > 0) notes.push(`${spend.excluded} dépense(s) exclues faute de taux de change ; coût par lead non calculé.`);
+  if (spend.excluded > 0) {
+    notes.push(`${spend.excluded} dépense(s) exclues faute de taux de change${leadSpend.excluded > 0 ? " ; coût par lead non calculé" : ""}.`);
+  }
+  if (clickRate.left > 0) notes.push(`Taux de clics : ${clickRate.left} campagne(s) sans clics ou sans impressions ne sont pas comptées.`);
   if (now.straddling > 0) notes.push(`${now.straddling} relevé(s) à cheval sur la période ne sont pas comptés.`);
   return { key: "campaigns", title: SECTION_LABELS.campaigns, kpis, notes };
 }

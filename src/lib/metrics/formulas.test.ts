@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  pairedRatio,
   achievementRate,
   conversionRate,
   cpc,
@@ -85,5 +86,31 @@ describe("taux d'engagement", () => {
 
   it("renvoie n/d sans portée ni impressions", () => {
     expect(engagementRate(50, null, 0)).toEqual({ value: null, basis: null });
+  });
+});
+
+describe("ratio d'un total sur des chiffres incomplets", () => {
+  const facebook = { clicks: 1074, impressions: null };
+  const linkedin = { clicks: 587, impressions: 11711 };
+
+  it("des clics sans impressions ne gonflent pas le taux", () => {
+    const result = pairedRatio([facebook, linkedin], "clicks", "impressions", 100);
+    expect(result.value).toBeCloseTo(5.01, 2);
+    expect(result.left).toBe(1);
+  });
+
+  it("aucune ligne complète : inconnu, jamais 0", () => {
+    expect(pairedRatio([facebook], "clicks", "impressions", 100)).toEqual({ value: null, left: 1 });
+    expect(pairedRatio([], "clicks", "impressions", 100)).toEqual({ value: null, left: 0 });
+  });
+
+  it("lignes complètes additionnées ; une ligne vide n'est pas signalée", () => {
+    const result = pairedRatio([linkedin, { clicks: 13, impressions: 289 }, { clicks: null, impressions: null }], "clicks", "impressions", 100);
+    expect(result.value).toBeCloseTo(5, 5);
+    expect(result.left).toBe(0);
+  });
+
+  it("dénominateur nul : inconnu", () => {
+    expect(pairedRatio([{ clicks: 5, impressions: 0 }], "clicks", "impressions", 100).value).toBeNull();
   });
 });

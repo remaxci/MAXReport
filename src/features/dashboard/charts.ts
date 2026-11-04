@@ -1,6 +1,6 @@
 import { evaluateBudget, loadBudgetData } from "@/features/budgets/evaluate";
 import { listBudgets } from "@/features/budgets/queries";
-import { sumInCurrency } from "@/features/crm/money";
+import { knownTotal, sumInCurrency } from "@/features/crm/money";
 import { getFxRates } from "@/features/fx/queries";
 import { WEBSITE_CHANNELS, type MarketingKind } from "@/features/marketing/config";
 import { listCampaigns, listSnapshots } from "@/features/marketing/queries";
@@ -221,7 +221,7 @@ export async function snapshotSeries(
       input.rates,
     );
     excluded += sum.excluded;
-    return sum.total;
+    return knownTotal(sum);
   });
   const straddling = totals.some((t) => t.straddling > 0);
   const notes = [...(straddling ? [STRADDLING_NOTE] : []), ...(excluded > 0 ? [`${excluded} montant(s) exclus faute de taux de change.`] : [])];
@@ -276,7 +276,7 @@ async function campaignCharts(c: Ctx): Promise<Chart[]> {
       c.rates,
     );
     excluded += sum.excluded;
-    return sum.total;
+    return knownTotal(sum);
   });
   const straddling = totals.some((t) => t.straddling > 0) ? [STRADDLING_NOTE] : [];
   return [
@@ -297,7 +297,7 @@ async function campaignCharts(c: Ctx): Promise<Chart[]> {
       currency: c.currency,
       series: [{ key: "spend", label: "Dépense", color: 1 }],
       rows: timeRows(c.periods, (_, i) => ({ spend: spend[i] })),
-      notes: excluded > 0 ? [`${excluded} dépense(s) exclues faute de taux de change.`] : [],
+      notes: [...straddling, ...(excluded > 0 ? [`${excluded} dépense(s) exclues faute de taux de change.`] : [])],
     },
   ];
 }

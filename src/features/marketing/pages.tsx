@@ -9,14 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MetricTile, PeriodPicker } from "@/features/activities/view";
 import { BackLink, customRows, Details } from "@/features/crm/view";
-import { sumInCurrency } from "@/features/crm/money";
+import { knownTotal, sumInCurrency } from "@/features/crm/money";
 import { getCustomFields } from "@/features/custom-fields/queries";
 import { getMemberOptions } from "@/features/registers/queries";
 import { ActionButton, EditDetails } from "@/features/settings/components/controls";
 import { formatDate, formatEvolution, formatMoney, formatNumber, formatPercent, todayIso } from "@/lib/format";
 import type { Currency, FxRate } from "@/lib/metrics/currency";
 import { getFxRates } from "@/features/fx/queries";
-import { cpl, ctr, conversionRate, engagementRate, ratio } from "@/lib/metrics/formulas";
+import { cpl, ctr, conversionRate, engagementRate, pairedRatio, ratio } from "@/lib/metrics/formulas";
 import { aggregateSnapshots, evolution, type Aggregated } from "@/lib/metrics/snapshots";
 import {
   periodFromQuery,
@@ -356,12 +356,21 @@ function CampaignComparison({
   const anySpend = rows.some((r) => r.current.values.spend !== null);
   const totalOf = (key: string) => total(rows.map((r) => r.current.values[key]));
   const leads = totalOf("leads");
+  // Coût par lead : la dépense des seules campagnes dont les leads sont connus.
+  const withLeads = rows.filter((r) => r.current.values.leads !== null && r.current.values.spend !== null);
+  const leadSpend = sumInCurrency(
+    withLeads.map((r) => ({ amount: r.current.values.spend, currency: r.item.currency ?? null })),
+    target,
+    period.end,
+    rates,
+  );
+  const globalCpl = withLeads.length > 0 ? cpl(leadSpend.total, total(withLeads.map((r) => r.current.values.leads))) : null;
   return (
     <>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <MetricTile
           label={`Dépense totale (${target})`}
-          value={anySpend ? formatMoney(spend.total, target) : "—"}
+          value={anySpend ? formatMoney(knownTotal(spend), target) : "—"}
           hint={
             spend.excluded > 0
               ? `Hors ${spend.excluded} montant(s) sans taux de change (Paramètres › Taux de change)`
@@ -375,7 +384,7 @@ function CampaignComparison({
         <MetricTile
           label="Leads"
           value={n(leads)}
-          hint={anySpend && spend.excluded === 0 ? `CPL global ${cpl(spend.total, leads) === null ? "n/d" : formatMoney(cpl(spend.total, leads), target)}` : undefined}
+          hint={anySpend && leadSpend.excluded === 0 ? `CPL global ${globalCpl === null ? "n/d" : formatMoney(globalCpl, target)}` : undefined}
         />
       </div>
       <Card>
@@ -430,6 +439,7 @@ function CampaignComparison({
 
 function WebsiteComparison({ rows, base }: { rows: Row[]; base: string }) {
   const sum = (key: string, from: "current" | "previous") => total(rows.map((r) => r[from].values[key]));
+  const conversion = pairedRatio(rows.map((r) => r.current.values), "conversions", "sessions", 100);
   return (
     <>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -438,7 +448,8 @@ function WebsiteComparison({ rows, base }: { rows: Row[]; base: string }) {
         <MetricTile label="Conversions" value={n(sum("conversions", "current"))} hint={evolutionHint(sum("conversions", "current"), sum("conversions", "previous"))} />
         <MetricTile
           label="Taux de conversion"
-          value={formatPercent(conversionRate(sum("conversions", "current"), sum("sessions", "current")), 1)}
+          value={formatPercent(conversion.value, 1)}
+          hint={conversion.left > 0 ? `Hors ${conversion.left} site(s) sans conversions ou sans sessions` : undefined}
         />
       </div>
       <Card>
