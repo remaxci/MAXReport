@@ -1,7 +1,9 @@
 # MAXreport · Connexion BI (Power BI, Excel)
 
-> **État** : évolution développée le 3 novembre 2026 sur la branche `evolution/connexion-bi`
-> (migration `20261103210000_connexion_bi`, appliquée sur la base de test), en attente de validation.
+> **État** : en production depuis le 4 novembre 2026 (migration `20261103210000_connexion_bi`).
+> Lecture vérifiée le même jour avec **Power BI Desktop** (jeu `marques`, en CSV). **Non testés** :
+> Excel, Power BI en ligne, et les autres jeux sur de vraies données (ils sont encore vides en
+> production).
 
 MAXreport met ses données à disposition d'un outil BI externe, **en lecture seule**, par des
 **clés d'accès**. Power BI et Excel (Power Query) s'y connectent avec leur connecteur « Web » ; tout
@@ -73,15 +75,26 @@ sont dans la devise de la ligne, et le jeu `taux_de_change` permet de convertir.
 ## Power BI Desktop
 
 1. **Obtenir les données › Web**, puis **Avancé**.
-2. **Parties de l'URL** : `https://<adresse de MAXreport>/api/bi/v1/offres?format=csv`.
-3. **En-têtes de requête HTTP** : `Authorization` = `Bearer mxbi_…` (le mot « Bearer », une
-   espace, puis la clé).
+2. **Parties d'URL** : `https://<adresse de MAXreport>/api/bi/v1/offres?format=csv`. La clé ne va
+   jamais dans cette case : Power BI la prendrait pour un nom de site et tenterait de le résoudre.
+3. **Paramètres de l'en-tête de la requête HTTP** : `Authorization` = `Bearer mxbi_…` (le mot
+   « Bearer », une espace, puis la clé). Copiez la clé en dernier, une fois l'adresse collée : le
+   presse-papiers ne garde qu'un texte à la fois.
 4. Si Power BI demande un mode d'authentification : **Anonyme** (la clé est dans l'en-tête).
 5. Répéter pour chaque jeu, puis relier les tables dans le modèle (par exemple `offres.marque` →
    `marques.code`, `taches.projet_id` → `projets.id`).
 
-Dans Power BI Service, l'actualisation planifiée fonctionne avec ces mêmes réglages (identifiants
-« Anonyme », passerelle inutile : MAXreport est accessible sur Internet).
+**La clé reste écrite dans le fichier Power BI** (dans la requête). Ne partagez ni ce fichier ni une
+capture où elle apparaît ; si cela arrive, révoquez-la et créez-en une autre.
+
+**Décimales** : en CSV, elles sont écrites avec un point. Sous Windows en français, vérifiez que les
+montants sont bien lus après le chargement. Si ce n'est pas le cas, indiquez dans Power Query que la
+colonne suit les paramètres régionaux « Anglais (États-Unis) », ou lisez le jeu en JSON (sans
+`?format=csv`). Ce cas n'a pas encore été vérifié sur de vraies données.
+
+**Power BI en ligne** : non testé. La connexion doit être créée dans Power BI Desktop puis publiée.
+L'actualisation planifiée avec un en-tête `Authorization` n'a pas été vérifiée : à essayer avant de
+compter dessus. Le partage de rapports demande une licence payante Power BI.
 
 ## Excel
 

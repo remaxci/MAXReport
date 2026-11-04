@@ -121,17 +121,27 @@ async function BiConnection({ slug }: { slug: string }) {
             <ol className="ml-5 list-decimal text-muted-foreground">
               <li>Obtenir les données › Web › Avancé.</li>
               <li>
-                Adresse : <code className="break-all">{endpoint}/offres?format=csv</code> (remplacez « offres » par le jeu voulu).
+                Parties d&apos;URL : <code className="break-all">{endpoint}/offres?format=csv</code> (remplacez « offres » par le jeu voulu). La clé
+                ne va jamais dans cette case.
               </li>
               <li>
-                En-tête de requête HTTP : <code>Authorization</code> = <code>Bearer</code> suivi d&apos;une espace et de la clé.
+                En-tête de la requête HTTP : <code>Authorization</code> = <code>Bearer</code> suivi d&apos;une espace et de la clé.
               </li>
-              <li>Power BI Service : actualisation planifiée possible, identification « Anonyme » (la clé est dans l&apos;en-tête).</li>
+              <li>Si un mode d&apos;authentification est demandé : « Anonyme » (la clé est dans l&apos;en-tête).</li>
             </ol>
           </div>
           <p className="text-muted-foreground">
+            La clé reste écrite dans le fichier Power BI ou Excel : ne partagez ni ce fichier ni une capture où elle apparaît. Si cela arrive,
+            révoquez-la et créez-en une autre.
+          </p>
+          <p className="text-muted-foreground">
             Liste des jeux ouverts par une clé : <code className="break-all">{endpoint}</code>. Une valeur vide signifie « aucune donnée »,
             jamais 0. Montants dans la devise de chaque ligne : le jeu « Taux de change » permet de convertir.
+          </p>
+          <p className="text-muted-foreground">
+            En CSV, les décimales sont écrites avec un point : sous Windows en français, vérifiez que les montants sont bien lus après le
+            chargement, ou lisez le jeu en JSON (sans <code>?format=csv</code>). L&apos;actualisation dans Power BI en ligne n&apos;a pas encore
+            été vérifiée avec cette connexion.
           </p>
           <details>
             <summary className="cursor-pointer font-medium">Jeux de données et colonnes</summary>
