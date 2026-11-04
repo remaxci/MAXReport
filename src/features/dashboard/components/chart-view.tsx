@@ -32,6 +32,12 @@ const hbarHeight = (rows: number) => Math.max(120, rows * 36 + 40);
 
 const seriesColor = (color: number | "muted") => (color === "muted" ? "var(--muted-foreground)" : `var(--chart-${color})`);
 
+/** Nom raccourci sur l'axe selon le nombre de catégories ; le nom complet reste dans l'info-bulle et le tableau. */
+function categoryTick(count: number) {
+  const max = count > 6 ? 8 : count > 4 ? 12 : 20;
+  return (value: string) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
+}
+
 export function ChartView({ chart }: { chart: Chart }) {
   const config: ChartConfig = Object.fromEntries(chart.series.map((s) => [s.key, { label: s.label, color: seriesColor(s.color) }]));
   const data = chart.rows.map((row) => ({ label: row.label, title: row.title ?? row.label, ...row.values }));
@@ -108,7 +114,11 @@ export function ChartView({ chart }: { chart: Chart }) {
         <ChartContainer config={config} className="aspect-auto h-60 w-full" role="img" aria-label={`${chart.title} : graphique, valeurs dans le tableau`}>
           <BarChart data={data} margin={{ top: 8, right: 12, left: 4, bottom: 0 }} barGap={2} accessibilityLayer>
             <CartesianGrid vertical={false} />
-            <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} minTickGap={12} />
+            {chart.rowHeader ? (
+              <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} interval={0} tickFormatter={categoryTick(data.length)} />
+            ) : (
+              <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} minTickGap={12} />
+            )}
             <YAxis tickLine={false} axisLine={false} width={48} tickFormatter={axisTick(chart)} allowDecimals={false} />
             {tooltip}
             {legend && <ChartLegend content={<ChartLegendContent />} />}
@@ -147,7 +157,7 @@ export function ChartView({ chart }: { chart: Chart }) {
           <Table className="mt-2">
             <TableHeader>
               <TableRow>
-                <TableHead>{chart.kind === "hbar" ? "" : "Période"}</TableHead>
+                <TableHead>{chart.rowHeader ?? (chart.kind === "hbar" ? "" : "Période")}</TableHead>
                 {chart.series.map((s) => (
                   <TableHead key={s.key} className="text-right">
                     {s.label}

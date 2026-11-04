@@ -8,13 +8,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PeriodPicker } from "@/features/activities/view";
 import { todayIso } from "@/lib/format";
 import { periodFromQuery, periodLabel, periodSearch, type Period } from "@/lib/periods";
+import { canCompareSellers } from "@/features/sellers/comparison";
 import { findBrand, getAuthContext, type BrandSummary } from "@/server/authz/context";
 import { can, type Access } from "@/server/authz/permissions";
+import { saveChartPreferences } from "./actions";
+import { chartGroups, isGroupHidden, withoutHidden, type ChartGroup } from "./chart-catalog";
 import { loadPlanningCharts, loadSectionCharts, type ChartInput } from "./charts";
+import { ChartFilter } from "./components/chart-filter";
 import { loadDashboard, type SectionKey } from "./data";
 import { DIRECTION_COLUMNS, loadDirection, loadDirectionCharts } from "./direction";
 import type { DirectionRow } from "./export";
-import { ChartsGrid, ChartsSkeleton, ExportBar, formatKpi, SectionsView } from "./view";
+import { getHiddenCharts } from "./queries";
+import { ChartsCard, ChartsGrid, ChartsSkeleton, ExportBar, formatKpi, readDashboardView, SectionsView, ViewTabs } from "./view";
 
 type Params = Promise<{ brand: string }>;
 type Search = Promise<Record<string, string | string[] | undefined>>;
@@ -45,7 +50,7 @@ async function BrandDashboard({ slug, query }: { slug: string; query: Query }) {
   const brand = findBrand(ctx, slug);
   if (!brand) notFound();
   const period = readPeriod(query);
-  const sections = await loadDashboard({ brand, access: ctx.access, period });
+  const view = readDashboardView(first(query.vue));
   const base = `/m/${brand.slug}`;
   const input: ChartInput = { brand, access: ctx.access, period };
 
@@ -63,38 +68,52 @@ async function BrandDashboard({ slug, query }: { slug: string; query: Query }) {
         <ExportBar excelHref={`${base}/export?${periodSearch(period)}`} />
       </PageHeader>
       <div className="print:hidden">
-        <PeriodPicker action={base} period={period} maxStart={todayIso()} />
+        <PeriodPicker action={base} period={period} maxStart={todayIso()} keep={view === "graphiques" ? { vue: view } : undefined} />
       </div>
-      {sections.length === 0 ? (
-        <Notice title="Rien à afficher">
-          Aucun module de cette marque ne vous est ouvert. Les indicateurs apparaissent selon les modules activés et vos droits.
-        </Notice>
-      ) : (
-        <SectionsView
-          sections={sections}
-          charts={Object.fromEntries(
-            sections.map((section) => [
-              section.key,
-              <Suspense key={section.key} fallback={<ChartsSkeleton />}>
-                <SectionCharts sectionKey={section.key} input={input} />
-              </Suspense>,
-            ]),
-          )}
-        />
-      )}
-      <Suspense fallback={null}>
-        <PlanningCharts input={input} base={base} />
+      <ViewTabs base={base} period={period} view={view} />
+      <Suspense fallback={<ChartsSkeleton />}>
+        {view === "graphiques" ? <BrandCharts input={input} userId={ctx.userId} /> : <BrandFigures input={input} base={base} />}
       </Suspense>
     </Page>
   );
 }
 
-/** Graphiques d'une section, chargés à part : les indicateurs s'affichent sans les attendre. */
-async function SectionCharts({ sectionKey, input }: { sectionKey: SectionKey; input: ChartInput }) {
-  return <ChartsGrid charts={await loadSectionCharts(sectionKey, input)} />;
+// ---------------------------------------------------------------------
+// Onglet « Chiffres »
+// ---------------------------------------------------------------------
+
+async function BrandFigures({ input, base }: { input: ChartInput; base: string }) {
+  const { brand, access } = input;
+  const sections = await loadDashboard({ brand, access, period: input.period });
+  if (sections.length === 0) {
+    return (
+      <Notice title="Rien à afficher">
+        Aucun module de cette marque ne vous est ouvert. Les indicateurs apparaissent selon les modules activés et vos droits.
+      </Notice>
+    );
+  }
+  const links = canCompareSellers(access, brand.id)
+    ? {
+        commercial: (
+          <CardDescription>
+            <Link href={`${base}/commerciaux?${periodSearch(input.period)}`} className="underline underline-offset-4">
+              Comparer les commerciaux
+            </Link>
+          </CardDescription>
+        ),
+      }
+    : undefined;
+  return (
+    <>
+      <SectionsView sections={sections} links={links} />
+      <Suspense fallback={null}>
+        <PlanningFigures input={input} base={base} />
+      </Suspense>
+    </>
+  );
 }
 
-async function PlanningCharts({ input, base }: { input: ChartInput; base: string }) {
+async function PlanningFigures({ input, base }: { input: ChartInput; base: string }) {
   const planning = await loadPlanningCharts(input);
   if (!planning) return null;
   return (
@@ -114,15 +133,53 @@ async function PlanningCharts({ input, base }: { input: ChartInput; base: string
           .
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        {planning.charts.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Aucun projet prévu, en cours ou en pause.</p>
-        ) : (
-          <ChartsGrid charts={planning.charts} />
-        )}
-      </CardContent>
     </Card>
   );
+}
+
+// ---------------------------------------------------------------------
+// Onglet « Graphiques » : ceux que la personne a choisi d'afficher
+// ---------------------------------------------------------------------
+
+async function BrandCharts({ input, userId }: { input: ChartInput; userId: string }) {
+  const { brand, access } = input;
+  const groups = chartGroups(brand, access);
+  if (groups.length === 0) {
+    return (
+      <Notice title="Rien à afficher">
+        Aucun module de cette marque ne vous est ouvert. Les graphiques apparaissent selon les modules activés et vos droits.
+      </Notice>
+    );
+  }
+  const hiddenList = await getHiddenCharts(brand.id, userId);
+  const hidden = new Set(hiddenList);
+  const shown = groups.filter((group) => !isGroupHidden(group, hidden));
+  return (
+    <>
+      <ChartFilter action={saveChartPreferences.bind(null, brand.slug)} groups={groups} hidden={hiddenList} />
+      {shown.length === 0 ? (
+        <Notice title="Aucun graphique sélectionné">Cochez au moins un graphique dans la liste ci-dessus, puis enregistrez.</Notice>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {shown.map((group) => (
+            <ChartsCard key={group.key} title={group.label}>
+              <Suspense fallback={<ChartsSkeleton />}>
+                <GroupCharts group={group} input={input} hidden={hidden} />
+              </Suspense>
+            </ChartsCard>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Graphiques d'un groupe, chargés à part : chacun s'affiche sans attendre les autres. */
+async function GroupCharts({ group, input, hidden }: { group: ChartGroup; input: ChartInput; hidden: ReadonlySet<string> }) {
+  const all = group.key === "planning" ? ((await loadPlanningCharts(input))?.charts ?? []) : await loadSectionCharts(group.key as SectionKey, input);
+  const charts = withoutHidden(group.key, all, hidden);
+  if (charts.length === 0) return <p className="text-sm text-muted-foreground">Aucune donnée à représenter sur cette période.</p>;
+  return <ChartsGrid charts={charts} />;
 }
 
 // =====================================================================
@@ -145,6 +202,7 @@ async function Direction({ slug, query }: { slug: string; query: Query }) {
   if (!can(ctx.access, "direction.read")) return <Forbidden />;
   const period = readPeriod(query);
   const brands = ctx.brands.filter((b) => b.isActive);
+  const view = readDashboardView(first(query.vue));
   const { rows, total } = await loadDirection(brands, ctx.access, period);
   const base = `/m/${slug}/direction`;
   const notes = rows.flatMap((r) => r.notes.map((n) => `${r.label} : ${n}`));
@@ -155,8 +213,16 @@ async function Direction({ slug, query }: { slug: string; query: Query }) {
         <ExportBar excelHref={`${base}/export?${periodSearch(period)}`} />
       </PageHeader>
       <div className="print:hidden">
-        <PeriodPicker action={base} period={period} maxStart={todayIso()} />
+        <PeriodPicker action={base} period={period} maxStart={todayIso()} keep={view === "graphiques" ? { vue: view } : undefined} />
       </div>
+      <ViewTabs base={base} period={period} view={view} />
+      {view === "graphiques" ? (
+        <ChartsCard title="Comparaison et tendance">
+          <Suspense fallback={<ChartsSkeleton />}>
+            <DirectionCharts brands={brands} access={ctx.access} period={period} rows={rows} />
+          </Suspense>
+        </ChartsCard>
+      ) : (
       <Card>
         <CardHeader>
           <CardTitle>Consolidation</CardTitle>
@@ -199,16 +265,7 @@ async function Direction({ slug, query }: { slug: string; query: Query }) {
           )}
         </CardContent>
       </Card>
-      <Card className="break-inside-avoid">
-        <CardHeader>
-          <CardTitle>Comparaison et tendance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Suspense fallback={<ChartsSkeleton />}>
-            <DirectionCharts brands={brands} access={ctx.access} period={period} rows={rows} />
-          </Suspense>
-        </CardContent>
-      </Card>
+      )}
     </Page>
   );
 }

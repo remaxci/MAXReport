@@ -14,6 +14,8 @@ import { availableMetrics, METRICS, type MetricKey } from "@/lib/metrics/actuals
 import { convert, type Currency, type FxRate } from "@/lib/metrics/currency";
 import { seriesPeriods } from "@/lib/metrics/series";
 import { rangeLabel, type Period } from "@/lib/periods";
+import { canCompareSellers, sellerRevenueChart } from "@/features/sellers/comparison";
+import { loadSellerComparison } from "@/features/sellers/data";
 import type { BrandSummary } from "@/server/authz/context";
 import { can, type Access, type Permission } from "@/server/authz/permissions";
 import { knownKeys, stageFunnel, timeRows, type Chart } from "./chart-data";
@@ -149,6 +151,12 @@ async function commercialCharts(c: Ctx): Promise<Chart[]> {
         notes,
       });
     }
+  }
+
+  if (metrics.includes("revenue_signed") && canCompareSellers(c.access, c.brand.id)) {
+    const comparison = await loadSellerComparison({ brand: c.brand, access: c.access, period: c.period });
+    const sellers = sellerRevenueChart(comparison, comparison.currency);
+    if (sellers) charts.push(sellers);
   }
   return charts;
 }
@@ -304,7 +312,7 @@ async function websiteCharts(c: Ctx): Promise<Chart[]> {
   if (recorded.length > 0) {
     return [
       {
-        key: "channels",
+        key: "sessions",
         title: "Sessions par canal",
         description: "Ventilation saisie dans les relevés des sites.",
         kind: "stacked",

@@ -701,6 +701,35 @@ export type Database = {
           },
         ]
       }
+      dashboard_chart_preferences: {
+        Row: {
+          brand_id: string
+          hidden: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand_id: string
+          hidden?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          brand_id?: string
+          hidden?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_chart_preferences_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_events: {
         Row: {
           actor_id: string | null

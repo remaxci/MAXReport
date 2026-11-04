@@ -42,8 +42,9 @@ export function ActivityTabs({ base, active, own, team }: { base: string; active
 }
 
 /** Choix de la période (type et date de référence) avec période précédente / suivante. */
-export function PeriodPicker({ action, period, maxStart }: { action: string; period: Period; maxStart?: string }) {
-  const link = (p: Period) => `${action}?periode=${PERIOD_SLUGS[p.kind]}&du=${p.start}`;
+export function PeriodPicker({ action, period, maxStart, keep }: { action: string; period: Period; maxStart?: string; keep?: Record<string, string> }) {
+  const kept = keep ? Object.entries(keep) : [];
+  const link = (p: Period) => `${action}?${new URLSearchParams([["periode", PERIOD_SLUGS[p.kind]], ["du", p.start], ...kept])}`;
   const previous = shiftPeriod(period, -1);
   const next = shiftPeriod(period, 1);
   const hasNext = !maxStart || next.start <= maxStart;
@@ -65,6 +66,9 @@ export function PeriodPicker({ action, period, maxStart }: { action: string; per
         )}
       </div>
       <Form action={action} className="flex flex-wrap items-end gap-3">
+        {kept.map(([name, value]) => (
+          <input key={name} type="hidden" name={name} value={value} />
+        ))}
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="periode">Période</Label>
           <NativeSelect id="periode" name="periode" defaultValue={PERIOD_SLUGS[period.kind]}>

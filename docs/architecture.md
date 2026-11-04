@@ -89,6 +89,7 @@ L'application n'utilise aucune clé secrète Supabase : les invitations partent 
 /m/[marque]                tableau de bord de la marque
 /m/[marque]/marketing/     reseaux · campagnes · sites
 /m/[marque]/commercial/    activites · prospects · opportunites · offres · memos · contrats
+/m/[marque]/commerciaux    comparaison des commerciaux (chiffres, graphiques, export Excel)
 /m/[marque]/objectifs
 /m/[marque]/budgets
 /m/[marque]/rapports
@@ -475,6 +476,9 @@ Un sprint est un lot livrable et vérifiable, développé sur sa propre branche 
 - Tableau de bord de marque par sections (commercial, objectifs en cours, réseaux sociaux, campagnes, sites, budgets), visibles selon les modules actifs et les droits ; tout est lu sous la RLS de l'utilisateur : un tableau de bord ne montre jamais plus que ce que son lecteur peut déjà consulter.
 - Commercial : réalisés de l'équipe (`metric_actuals`), taux de transformation des offres et de réponse aux mémos (par date d'envoi), pipeline pondéré en cours. Évolutions en % par rapport à la période précédente ; un taux évolue en points.
 - Historique agrégé : date de bascule par marque (paramètres du module Imports, rôle global). Avant elle, l'historique importé (chiffre d'équipe s'il existe, sinon somme des collaborateurs) ; à partir d'elle, les données saisies. Une période à cheval est coupée à la date de bascule.
+- Chiffres et graphiques séparés : le tableau de bord, la Vue Direction et la comparaison des commerciaux ont deux onglets (`?vue=graphiques`). Rien n'est chargé pour l'onglet non affiché ; la période est conservée d'un onglet à l'autre.
+- Choix des graphiques : sur le tableau de bord de marque, chacun coche ceux qu'il veut voir (`dashboard_chart_preferences` : une ligne par personne et par marque, RLS sur soi). On retient les graphiques masqués, pour qu'un nouveau graphique reste visible par défaut. Seuls les graphiques proposés à la personne sont enregistrés, et ce choix n'ouvre aucune donnée (`src/features/dashboard/chart-catalog.ts`).
+- Comparaison des commerciaux (`activities.read_all` ou `objectives.read_all`, mêmes droits que `metric_actuals`, qui regroupe les collègues pour les autres : un commercial ne voit jamais les chiffres individuels d'un collègue). Une ligne par personne : CA signé et part, contrats, contrat moyen, offres et taux de transformation (si le lecteur voit toutes les offres), opportunités, mémos, appels, e-mails, rendez-vous, puis le total. Fiche non soumise : valeur inconnue, jamais 0. La couleur d'une courbe suit la personne, pas son classement ; au-delà de huit, les suivants sont regroupés. L'historique importé d'avant la date de bascule n'est pas réparti par commercial : la page le signale.
 - Vue Direction (`direction.read`, rôles globaux) : une ligne par marque et un total consolidé en XOF ; seuls des flux s'additionnent (CA signé, contrats, opportunités, offres, dépense de campagnes, leads, budget engagé).
 - Modèles de rapports (`report_templates`, `reports.manage`) : nom, sections, période par défaut ; aucune donnée stockée.
 - Exports : Excel (mêmes chiffres qu'à l'écran, mêmes droits) et PDF par l'impression du navigateur (mise en page sans menu).
