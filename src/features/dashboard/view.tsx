@@ -52,6 +52,45 @@ export function readDashboardView(value: string | undefined): DashboardView {
   return value === "graphiques" ? "graphiques" : "chiffres";
 }
 
+/** Onglets des sections du tableau de bord ; la période et la vue sont conservées. Défilent sur un petit écran. */
+export function SectionTabs({
+  base,
+  period,
+  view,
+  tabs,
+  active,
+}: {
+  base: string;
+  period: Period;
+  view: DashboardView;
+  tabs: readonly { slug: string; label: string }[];
+  active: string;
+}) {
+  const href = (slug: string, index: number) => {
+    const params = new URLSearchParams(periodSearch(period));
+    if (view === "graphiques") params.set("vue", view);
+    if (index > 0) params.set("section", slug);
+    return `${base}?${params}`;
+  };
+  return (
+    <nav aria-label="Sections du tableau de bord" className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-lg border p-1 print:hidden">
+      {tabs.map((tab, index) => (
+        <Link
+          key={tab.slug}
+          href={href(tab.slug, index)}
+          aria-current={tab.slug === active ? "page" : undefined}
+          className={cn(
+            "shrink-0 rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap",
+            tab.slug === active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          )}
+        >
+          {tab.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
 /** Onglets « Chiffres » et « Graphiques » : deux pages distinctes, la période est conservée. */
 export function ViewTabs({ base, period, view, keep }: { base: string; period: Period; view: DashboardView; keep?: Record<string, string> }) {
   const href = (target: DashboardView) => {
