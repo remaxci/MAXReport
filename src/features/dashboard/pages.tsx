@@ -19,7 +19,8 @@ import { loadDashboard, type SectionKey } from "./data";
 import { DIRECTION_COLUMNS, loadDirection, loadDirectionCharts } from "./direction";
 import type { DirectionRow } from "./export";
 import { getHiddenCharts } from "./queries";
-import { ChartsCard, ChartsGrid, ChartsSkeleton, ExportBar, formatKpi, readDashboardView, SectionsView, ViewTabs } from "./view";
+import { dashboardTabs, readDashboardTab, tabParams, tabSections, type DashboardTab } from "./tabs";
+import { ChartsCard, ChartsGrid, ChartsSkeleton, ExportBar, formatKpi, readDashboardView, SectionsView, SectionTabs, ViewTabs } from "./view";
 
 type Params = Promise<{ brand: string }>;
 type Search = Promise<Record<string, string | string[] | undefined>>;
@@ -53,6 +54,9 @@ async function BrandDashboard({ slug, query }: { slug: string; query: Query }) {
   const view = readDashboardView(first(query.vue));
   const base = `/m/${brand.slug}`;
   const input: ChartInput = { brand, access: ctx.access, period };
+  const tabs = dashboardTabs(brand, ctx.access);
+  const tab = readDashboardTab(first(query.section), tabs);
+  const section = tabParams(tab, tabs);
 
   return (
     <Page>
@@ -68,12 +72,21 @@ async function BrandDashboard({ slug, query }: { slug: string; query: Query }) {
         <ExportBar excelHref={`${base}/export?${periodSearch(period)}`} />
       </PageHeader>
       <div className="print:hidden">
-        <PeriodPicker action={base} period={period} maxStart={todayIso()} keep={view === "graphiques" ? { vue: view } : undefined} />
+        <PeriodPicker action={base} period={period} maxStart={todayIso()} keep={{ ...section, ...(view === "graphiques" ? { vue: view } : {}) }} />
       </div>
-      <ViewTabs base={base} period={period} view={view} />
-      <Suspense fallback={<ChartsSkeleton />}>
-        {view === "graphiques" ? <BrandCharts input={input} userId={ctx.userId} /> : <BrandFigures input={input} base={base} />}
-      </Suspense>
+      {tab ? (
+        <>
+          <SectionTabs base={base} period={period} view={view} tabs={tabs} active={tab.slug} />
+          <ViewTabs base={base} period={period} view={view} keep={section} />
+          <Suspense key={`${tab.slug}-${view}`} fallback={<ChartsSkeleton />}>
+            {view === "graphiques" ? <BrandCharts input={input} userId={ctx.userId} tab={tab} /> : <BrandFigures input={input} base={base} tab={tab} />}
+          </Suspense>
+        </>
+      ) : (
+        <Notice title="Rien à afficher">
+          Aucun module de cette marque ne vous est ouvert. Les indicateurs apparaissent selon les modules activés et vos droits.
+        </Notice>
+      )}
     </Page>
   );
 }
@@ -82,16 +95,9 @@ async function BrandDashboard({ slug, query }: { slug: string; query: Query }) {
 // Onglet « Chiffres »
 // ---------------------------------------------------------------------
 
-async function BrandFigures({ input, base }: { input: ChartInput; base: string }) {
+async function BrandFigures({ input, base, tab }: { input: ChartInput; base: string; tab: DashboardTab }) {
   const { brand, access } = input;
-  const sections = await loadDashboard({ brand, access, period: input.period });
-  if (sections.length === 0) {
-    return (
-      <Notice title="Rien à afficher">
-        Aucun module de cette marque ne vous est ouvert. Les indicateurs apparaissent selon les modules activés et vos droits.
-      </Notice>
-    );
-  }
+  const sections = await loadDashboard({ brand, access, period: input.period, sections: tabSections(tab) });
   const links = canCompareSellers(access, brand.id)
     ? {
         commercial: (
@@ -105,10 +111,12 @@ async function BrandFigures({ input, base }: { input: ChartInput; base: string }
     : undefined;
   return (
     <>
-      <SectionsView sections={sections} links={links} />
-      <Suspense fallback={null}>
-        <PlanningFigures input={input} base={base} />
-      </Suspense>
+      {sections.length > 0 && <SectionsView sections={sections} links={links} />}
+      {(tab.key === "planning" || tab.key === "all") && (
+        <Suspense fallback={null}>
+          <PlanningFigures input={input} base={base} />
+        </Suspense>
+      )}
     </>
   );
 }
@@ -141,7 +149,7 @@ async function PlanningFigures({ input, base }: { input: ChartInput; base: strin
 // Onglet « Graphiques » : ceux que la personne a choisi d'afficher
 // ---------------------------------------------------------------------
 
-async function BrandCharts({ input, userId }: { input: ChartInput; userId: string }) {
+async function BrandCharts({ input, userId, tab }: { input: ChartInput; userId: string; tab: DashboardTab }) {
   const { brand, access } = input;
   const groups = chartGroups(brand, access);
   if (groups.length === 0) {
@@ -153,12 +161,17 @@ async function BrandCharts({ input, userId }: { input: ChartInput; userId: strin
   }
   const hiddenList = await getHiddenCharts(brand.id, userId);
   const hidden = new Set(hiddenList);
-  const shown = groups.filter((group) => !isGroupHidden(group, hidden));
+  const inTab = tab.key === "all" ? groups : groups.filter((group) => group.key === tab.key);
+  const shown = inTab.filter((group) => !isGroupHidden(group, hidden));
   return (
     <>
       <ChartFilter action={saveChartPreferences.bind(null, brand.slug)} groups={groups} hidden={hiddenList} />
-      {shown.length === 0 ? (
-        <Notice title="Aucun graphique sélectionné">Cochez au moins un graphique dans la liste ci-dessus, puis enregistrez.</Notice>
+      {inTab.length === 0 ? (
+        <Notice title="Aucun graphique dans cet onglet">Cette section n&apos;a pas de graphique pour cette marque.</Notice>
+      ) : shown.length === 0 ? (
+        <Notice title="Aucun graphique sélectionné">
+          {tab.key === "all" ? "Cochez au moins un graphique" : `Cochez au moins un graphique de « ${tab.label} »`} dans la liste ci-dessus, puis enregistrez.
+        </Notice>
       ) : (
         <div className="flex flex-col gap-6">
           {shown.map((group) => (
